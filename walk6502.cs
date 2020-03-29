@@ -46,95 +46,7 @@ namespace simple_emu_c64
             seen.Clear();
         }
 
-        // Commodore 64 - walk Kernal Reset vector, MAIN, CRUNCH, GONE (EXECUTE), Statements, Functions, and Operators BASIC ROM code
-        public static void Walk(Emu6502 cpu)
-        {
-            byte[] memory = cpu.memory;
-
-            // in case cpu has not been reset, manually initialize low memory that will be called by BASIC and KERNAL ROM
-
-            Array.Copy(memory, 0xE3A2, memory, 0x73, 0x18); // CHRGET
-
-            memory[0x300] = LO(0xE38B); // ERROR
-            memory[0x301] = HI(0xE38B);
-
-            memory[0x302] = LO(0xA483); // MAIN
-            memory[0x303] = HI(0xA483);
-
-            memory[0x304] = LO(0xA57C); // CRUNCH
-            memory[0x305] = HI(0xA57C);
-
-            memory[0x306] = LO(0xA71A); // QPLOP
-            memory[0x307] = HI(0xA71A);
-
-            memory[0x308] = LO(0xA7E4); // GONE
-            memory[0x309] = HI(0xA7E4);
-
-            memory[0x30A] = LO(0xAE86); // EVAL
-            memory[0x30B] = HI(0xAE86);
-
-            memory[0x31A] = LO(0xF34A); // OPEN
-            memory[0x31B] = HI(0xF34A);
-
-            memory[0x31C] = LO(0xF291); // CLOSE
-            memory[0x31D] = HI(0xF291);
-
-            memory[0x31E] = LO(0xF20E); // CHKIN
-            memory[0x31F] = HI(0xF20E);
-
-            memory[0x320] = LO(0xF250); // CKOUT
-            memory[0x321] = HI(0xF250);
-
-            memory[0x322] = LO(0xF333); // CHECK STOP
-            memory[0x323] = HI(0xF333);
-
-            memory[0x324] = LO(0xF157); // CHRIN
-            memory[0x325] = HI(0xF157);
-
-            memory[0x326] = LO(0xF1CA); // CHROUT
-            memory[0x327] = HI(0xF1CA);
-
-            memory[0x328] = LO(0xF6ED); // STOP
-            memory[0x329] = HI(0xF6ED);
-
-            memory[0x32A] = LO(0xF13E); // GETIN
-            memory[0x32B] = HI(0xF13E);
-
-            memory[0x32C] = LO(0xF32F); // CLALL
-            memory[0x32D] = HI(0xF32F);
-
-            memory[0x330] = LO(0xF4A5); // LOAD
-            memory[0x331] = HI(0xF4A5);
-
-            memory[0x332] = LO(0xF5ED); // SAVE
-            memory[0x333] = HI(0xF5ED);
-
-            ushort addr = (ushort)((memory[0xFFFC] | (memory[0xFFFD] << 8))); // RESET vector
-            Walk(cpu, addr);
-
-            // Portion of MAIN, CRUNCH and GONE(Execute) or MAIN1(Store line)
-            Walk(cpu, 0xA494);
-
-            for (ushort table = 0xA00C; table < 0xA051; table += 2) // BASIC Statements
-            {
-                addr = (ushort)((memory[table] | (memory[table + 1] << 8)) + 1); // put on stack for RTS, so must add one
-                Walk(cpu, addr);
-            }
-
-            for (ushort table = 0xA052; table < 0xA07F; table += 2) // Function Dispatch
-            {
-                addr = (ushort)((memory[table] | (memory[table + 1] << 8)));
-                Walk(cpu, addr);
-            }
-
-            for (ushort table = 0xA080; table < 0xA09D; table += 3) // Operator Dispatch
-            {
-                addr = (ushort)((memory[table + 1] | (memory[table + 2] << 8)) + 1); // put on stack for RTS, so must add one
-                Walk(cpu, addr);
-            }
-        }
-
-        private static void Walk(Emu6502 cpu, ushort addr)
+        public static void Walk(Emu6502 cpu, ushort addr)
         {
             bool conditional;
             byte bytes;
@@ -199,16 +111,6 @@ namespace simple_emu_c64
                         break;
                 }
             }
-        }
-
-        static byte LO(ushort value)
-        {
-            return (byte)value;
-        }
-
-        static byte HI(ushort value)
-        {
-            return (byte)(value >> 8);
         }
 
     }

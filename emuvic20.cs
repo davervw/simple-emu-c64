@@ -1,4 +1,4 @@
-﻿// emuc64.cs - Class EmuC64 - Commodore 64 Emulator
+﻿// EmuVIC20.cs - Class EmuVIC20 - Commodore VIC-20 Emulator
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -46,16 +46,17 @@
 // No timers.  No interrupts except BRK.  No NMI/RESTORE key.  No STOP key.
 // No loading of files implemented.
 //
-//   $00/$01     (DDR and banking and I/O of 6510 missing), just RAM
-//   $0000-$9FFF RAM (199=reverse if non-zero, 646=foreground color)
-//   $A000-$BFFF BASIC ROM (no RAM underneath)
-//   $C000-$CFFF RAM
-//   $D000-$DFFF (missing I/O and character ROM and RAM banks), just zeros except...
-//   $D021       Background Screen Color
-//   $D800-$DFFF VIC-II color RAM nybbles
-//   $E000-$FFFF KERNAL ROM (no RAM underneath)
+//   $0000-$03FF RAM (199=reverse if non-zero, 646=foreground color)
+//   $0400-$0FFF (3K RAM expansion, not implemented)
+//   $1000-$1DFF 3K RAM (for BASIC)
+//   $1E00-$1FFF RAM (Screen characters)
+//   $2000-$7FFF (24K RAM expansion, not implemented)
+//   $8000-$9FFF (Character ROM, not implemented)
+//   $A000-$BFFF (8K Cartridge ROM, or RAM expansion)
+//   $C000-$DFFF BASIC ROM
+//   $E000-$FFFF KERNAL ROM
 //
-// Requires user provided Commodore 64 BASIC/KERNAL ROMs (e.g. from VICE)
+// Requires user provided Commodore Vic-20 BASIC/KERNAL ROMs (e.g. from VICE)
 //   as they are not provided, others copyrights may still be in effect.
 //
 ////////////////////////////////////////////////////////////////////////////////
@@ -63,6 +64,7 @@
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //uncomment for Commodore foreground, background colors and reverse emulation
 //#define CBM_COLOR
+//NOTE: Using C64 color mapping, not adjusted for VIC-20 differences yet
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 using System;
@@ -70,27 +72,29 @@ using System.IO;
 
 namespace simple_emu_c64
 {
-    public class EmuC64 : Emu6502
+    public class EmuVIC20 : Emu6502
     {
-        public EmuC64(string basic_file, string kernal_file) : base(new byte[65536])
+        public EmuVIC20(string char_file, string basic_file, string kernal_file) : base(new byte[65536])
         {
+            byte[] char_rom = File.ReadAllBytes(char_file);
             byte[] basic_rom = File.ReadAllBytes(basic_file);
             byte[] kernal_rom = File.ReadAllBytes(kernal_file);
 
             for (int i = 0; i < memory.Length; ++i)
                 memory[i] = 0;
 
-            Array.Copy(basic_rom, 0, memory, 0xA000, basic_rom.Length);
+            Array.Copy(char_rom, 0, memory, 0x8000, char_rom.Length);
+            Array.Copy(basic_rom, 0, memory, 0xC000, basic_rom.Length);
             Array.Copy(kernal_rom, 0, memory, 0xE000, kernal_rom.Length);
         }
 
         protected override void SetMemory(ushort addr, byte value)
         {
-            if (addr < 0xA000 || (addr >= 0xC000 && addr < 0xD000) || (addr >= 0xD800 && addr < 0xDC00)) // only allow writing to RAM (not ROM or I/O)
+            if (addr < 0x0400 || (addr >= 0x1000 && addr < 0x2000))
             {
                 base.SetMemory(addr, value);
             }
-            else if (addr == 0xD021) // background
+            else if (addr == 0x900F) // background/border/inverse
             {
 #if CBM_COLOR
                 bool reverse = (memory[199] != 0);
@@ -101,7 +105,7 @@ namespace simple_emu_c64
                     Console.BackgroundColor = ToConsoleColor(value);
 #endif
 
-                base.SetMemory(addr, (byte)(value & 0xF)); // store value so can be retrieved
+                base.SetMemory(addr, (byte)value); // store value so can be retrieved
             }
         }
 
@@ -116,16 +120,16 @@ namespace simple_emu_c64
                 else if (c >= ' ' && c <= '~')
                 {
 #if CBM_COLOR
-                    bool reverse = (memory[199] != 0);
+                    bool reverse = (memory[199] != 0) ^ ((memory[0x900F] & 0x8) == 0);
                     if (reverse)
                     {
                         Console.BackgroundColor = ToConsoleColor(memory[646]);
-                        Console.ForegroundColor = ToConsoleColor(memory[0xD021]);
+                        Console.ForegroundColor = ToConsoleColor(memory[0x900F]);
                     }
                     else
                     {
                         Console.ForegroundColor = ToConsoleColor(memory[646]);
-                        Console.BackgroundColor = ToConsoleColor(memory[0xD021]);
+                        Console.BackgroundColor = ToConsoleColor(memory[0x900F]);
                     }
 #endif
                     Console.Write(c);
@@ -198,102 +202,6 @@ namespace simple_emu_c64
                 case 15: return ConsoleColor.Gray;
                 default: throw new InvalidOperationException("Missing case number in ToConsoleColor");
             }
-        }
-
-        // Commodore 64 - walk Kernal Reset vector, MAIN, CRUNCH, GONE (EXECUTE), Statements, Functions, and Operators BASIC ROM code
-        public override void Walk()
-        {
-            // in case cpu has not been reset, manually initialize low memory that will be called by BASIC and KERNAL ROM
-            Array.Copy(memory, 0xE3A2, memory, 0x73, 0x18); // CHRGET
-
-            memory[0x300] = LO(0xE38B); // ERROR
-            memory[0x301] = HI(0xE38B);
-
-            memory[0x302] = LO(0xA483); // MAIN
-            memory[0x303] = HI(0xA483);
-
-            memory[0x304] = LO(0xA57C); // CRUNCH
-            memory[0x305] = HI(0xA57C);
-
-            memory[0x306] = LO(0xA71A); // QPLOP
-            memory[0x307] = HI(0xA71A);
-
-            memory[0x308] = LO(0xA7E4); // GONE
-            memory[0x309] = HI(0xA7E4);
-
-            memory[0x30A] = LO(0xAE86); // EVAL
-            memory[0x30B] = HI(0xAE86);
-
-            memory[0x31A] = LO(0xF34A); // OPEN
-            memory[0x31B] = HI(0xF34A);
-
-            memory[0x31C] = LO(0xF291); // CLOSE
-            memory[0x31D] = HI(0xF291);
-
-            memory[0x31E] = LO(0xF20E); // CHKIN
-            memory[0x31F] = HI(0xF20E);
-
-            memory[0x320] = LO(0xF250); // CKOUT
-            memory[0x321] = HI(0xF250);
-
-            memory[0x322] = LO(0xF333); // CHECK STOP
-            memory[0x323] = HI(0xF333);
-
-            memory[0x324] = LO(0xF157); // CHRIN
-            memory[0x325] = HI(0xF157);
-
-            memory[0x326] = LO(0xF1CA); // CHROUT
-            memory[0x327] = HI(0xF1CA);
-
-            memory[0x328] = LO(0xF6ED); // STOP
-            memory[0x329] = HI(0xF6ED);
-
-            memory[0x32A] = LO(0xF13E); // GETIN
-            memory[0x32B] = HI(0xF13E);
-
-            memory[0x32C] = LO(0xF32F); // CLALL
-            memory[0x32D] = HI(0xF32F);
-
-            memory[0x330] = LO(0xF4A5); // LOAD
-            memory[0x331] = HI(0xF4A5);
-
-            memory[0x332] = LO(0xF5ED); // SAVE
-            memory[0x333] = HI(0xF5ED);
-
-            base.Walk(); // reset seen, and walk the RESET vector
-
-            // Portion of MAIN, CRUNCH and GONE(Execute) or MAIN1(Store line)
-            Walk6502.Walk(this, 0xA494);
-
-            ushort addr;
-
-            for (ushort table = 0xA00C; table < 0xA051; table += 2) // BASIC Statements
-            {
-                addr = (ushort)((memory[table] | (memory[table + 1] << 8)) + 1); // put on stack for RTS, so must add one
-                Walk6502.Walk(this, addr);
-            }
-
-            for (ushort table = 0xA052; table < 0xA07F; table += 2) // Function Dispatch
-            {
-                addr = (ushort)((memory[table] | (memory[table + 1] << 8)));
-                Walk6502.Walk(this, addr);
-            }
-
-            for (ushort table = 0xA080; table < 0xA09D; table += 3) // Operator Dispatch
-            {
-                addr = (ushort)((memory[table + 1] | (memory[table + 2] << 8)) + 1); // put on stack for RTS, so must add one
-                Walk6502.Walk(this, addr);
-            }
-        }
-
-        static byte LO(ushort value)
-        {
-            return (byte)value;
-        }
-
-        static byte HI(ushort value)
-        {
-            return (byte)(value >> 8);
         }
     }
 }

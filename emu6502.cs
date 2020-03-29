@@ -66,6 +66,13 @@ namespace simple_emu_c64
             Execute(addr);
         }
 
+        public virtual void Walk()
+        {
+            Walk6502.Reset();
+            ushort addr = (ushort)((memory[0xFFFC] | (memory[0xFFFD] << 8))); // RESET vector
+            Walk6502.Walk(this, addr);
+        }
+
         protected virtual bool ExecutePatch()
         {
             return false;

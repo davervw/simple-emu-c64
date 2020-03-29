@@ -31,6 +31,9 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+using System;
+using System.IO;
+
 namespace simple_emu_c64
 {
     class Program
@@ -38,9 +41,76 @@ namespace simple_emu_c64
         static void Main(string[] args)
         {
             // recommend get basic, kernal ROM files from a C64 emulator such as https://vice-emu.sourceforge.io/index.html#download
-            var c64 = new EmuC64("basic", "kernal");
-            c64.ResetRun();
-            //Walk6502.Walk(c64);
+            Emu6502 cbm = null;
+            bool error = false;
+
+            try
+            {
+                if (args.Length == 0 || args[0] == "c64")
+                {
+                    if (File.Exists("basic") && File.Exists("kernal") && (!File.Exists("c64\\basic") || !File.Exists("c64\\kernal")))
+                        cbm = new EmuC64(basic_file: "basic", kernal_file: "kernal");
+                    else
+                        cbm = new EmuC64(basic_file: "c64\\basic", kernal_file: "c64\\kernal");
+                }
+                else if (args.Length > 0 && args[0] == "vic20")
+                {
+                    cbm = new EmuVIC20(char_file: "vic20\\chargen", basic_file: "vic20\\basic", kernal_file: "vic20\\kernal");
+                }
+                else
+                {
+                    error = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex.ToString());
+                error = true;
+            }
+
+            if (error)
+            {
+                Console.Error.WriteLine("Usage:");
+                Console.Error.WriteLine("  simple-emu-c64     (with no arguments defaults to C64)");
+                Console.Error.WriteLine("  simple-emu-c64 c64 [walk [addr1 ...]]");
+                Console.Error.WriteLine("  simple-emu-c64 vic20 [walk [addr1 ...]]");
+                Console.Error.WriteLine("  (with appropriate roms in c64 or vic20 folder)");
+                return;
+            }
+
+            if (args.Length >= 2 && args[1] == "walk")
+            {
+                if (args.Length == 2)
+                    cbm.Walk();
+                else
+                {
+                    Walk6502.Reset();
+                    for (int i = 2; i < args.Length; ++i)
+                        Walk6502.Walk(cbm, ParseAddr(args[i]));
+                }
+            }
+            else
+            {
+                cbm.ResetRun();
+            }
+        }
+
+        static ushort ParseAddr(string str_addr)
+        {
+            try
+            {
+                if (str_addr.ToLower().StartsWith("0x"))
+                    str_addr = str_addr.Substring(2);
+                else if (str_addr.StartsWith("$") || str_addr.StartsWith("x"))
+                    str_addr = str_addr.Substring(1);
+
+                return ushort.Parse(str_addr, System.Globalization.NumberStyles.HexNumber);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex.ToString());
+                throw new InvalidOperationException("Hex address expected, optionally preceeded by $ or 0x or x");
+            }
         }
     }
 }
