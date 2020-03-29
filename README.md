@@ -20,13 +20,13 @@ LIMITATIONS:
    Just 44K RAM, 16K ROM, 1K VIC-II color RAM nybbles
 * No timers.  No interrupts except BRK.  No NMI/RESTORE key.  No STOP key.
 * No loading of files implemented.
-* Where do I plug in my cartridge?
+* Where do I plug in my cartridge?  What, no joystick?
 * Lightly tested.  Bugs are lurking! 
 
 CREDITS:
 
 * [Micro Logic Corp. 6502 (65XX) Microprocessor Instant Reference Card](https://archive.org/details/6502MicroprocessorInstantReferenceCard)
-* Compute's [Mapping the Commodore 64](www.archive.org)
+* Compute's [Mapping the Commodore 64](https://archive.org/details/Compute_s_Mapping_the_Commodore_64)
 * [VICE](https://vice-emu.sourceforge.io/) for performing trace comparisons 
 * Commodore 64 BASIC/KERNAL ROM from [VICE](https://vice-emu.sourceforge.io/) or [Zimmers.net](http://www.zimmers.net/anonftp/pub/cbm/firmware/computers/c64/) or other
 * Inspired by [mist64/cbmbasic](https://github.com/mist64/cbmbasic)
