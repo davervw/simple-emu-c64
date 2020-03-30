@@ -46,16 +46,24 @@ namespace simple_emu_c64
 
             try
             {
-                if (args.Length == 0 || args[0] == "c64")
+                if (args.Length == 0 || args[0].ToLower() == "c64")
                 {
                     if (File.Exists("basic") && File.Exists("kernal") && (!File.Exists("c64\\basic") || !File.Exists("c64\\kernal")))
                         cbm = new EmuC64(basic_file: "basic", kernal_file: "kernal");
                     else
                         cbm = new EmuC64(basic_file: "c64\\basic", kernal_file: "c64\\kernal");
                 }
-                else if (args.Length > 0 && args[0] == "vic20")
+                else if (args.Length > 0 && args[0].ToLower() == "vic20")
                 {
                     cbm = new EmuVIC20(char_file: "vic20\\chargen", basic_file: "vic20\\basic", kernal_file: "vic20\\kernal");
+                }
+                else if (args.Length > 0 && args[0].ToLower() == "c16")
+                {
+                    cbm = new EmuC16(basic_file: "c16\\basic", kernal_file: "c16\\kernal");
+                }
+                else if (args.Length > 0 && args[0].ToLower() == "pet")
+                {
+                    cbm = new EmuPET(basic_file: "pet\\basic2", edit_file: "pet\\edit2b", kernal_file: "pet\\kernal2");
                 }
                 else
                 {
@@ -70,15 +78,21 @@ namespace simple_emu_c64
 
             if (error)
             {
+                Console.Error.WriteLine("6502 Emulator for Microsoft Windows Console");
+                Console.Error.WriteLine("simple-emu-c64 version 1.3");
+                Console.Error.WriteLine("Copyright (c) 2020 by David R. Van Wagner ALL RIGHTS RESERVED");
+                Console.Error.WriteLine("davevw.com");
+                Console.Error.WriteLine("");
                 Console.Error.WriteLine("Usage:");
                 Console.Error.WriteLine("  simple-emu-c64     (with no arguments defaults to C64)");
                 Console.Error.WriteLine("  simple-emu-c64 c64 [walk [addr1 ...]]");
                 Console.Error.WriteLine("  simple-emu-c64 vic20 [walk [addr1 ...]]");
+                Console.Error.WriteLine("  simple-emu-c16 c16 [walk [addr1 ...]]");
                 Console.Error.WriteLine("  (with appropriate roms in c64 or vic20 folder)");
                 return;
             }
 
-            if (args.Length >= 2 && args[1] == "walk")
+            if (args.Length >= 2 && args[1].ToLower() == "walk")
             {
                 if (args.Length == 2)
                     cbm.Walk();

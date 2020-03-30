@@ -82,6 +82,10 @@ namespace simple_emu_c64
 
             Array.Copy(basic_rom, 0, memory, 0xA000, basic_rom.Length);
             Array.Copy(kernal_rom, 0, memory, 0xE000, kernal_rom.Length);
+
+#if CBM_COLOR
+            CBM_Console.ApplyColor = ApplyColor;
+#endif
         }
 
         protected override void SetMemory(ushort addr, byte value)
@@ -105,73 +109,43 @@ namespace simple_emu_c64
             }
         }
 
+        private void ApplyColor()
+        {
+            bool reverse = (memory[199] != 0);
+            if (reverse)
+            {
+                Console.BackgroundColor = ToConsoleColor(memory[646]);
+                Console.ForegroundColor = ToConsoleColor(memory[0xD021]);
+            }
+            else
+            {
+                Console.ForegroundColor = ToConsoleColor(memory[646]);
+                Console.BackgroundColor = ToConsoleColor(memory[0xD021]);
+            }
+        }
+
         protected override bool ExecutePatch()
         {
             if (base.PC == 0xFFD2) // CHROUT
             {
-                // we're emulating, so draw character on local console window
-                char c = (char)A;
-                if (c == 0x0D)
-                    Console.WriteLine();
-                else if (c >= ' ' && c <= '~')
-                {
-#if CBM_COLOR
-                    bool reverse = (memory[199] != 0);
-                    if (reverse)
-                    {
-                        Console.BackgroundColor = ToConsoleColor(memory[646]);
-                        Console.ForegroundColor = ToConsoleColor(memory[0xD021]);
-                    }
-                    else
-                    {
-                        Console.ForegroundColor = ToConsoleColor(memory[646]);
-                        Console.BackgroundColor = ToConsoleColor(memory[0xD021]);
-                    }
-#endif
-                    Console.Write(c);
-                }
-                else if (c == 147)
-                {
-                    try
-                    {
-                        Console.Clear();
-                    }
-                    catch (Exception)
-                    {
-                        // ignore exception, e.g. not a console
-                    }
-                }
+                CBM_Console.WriteChar((char)A);
                 // fall through to draw character in screen memory too
             }
             else if (base.PC == 0xFFCF) // CHRIN
             {
-                while (true)
-                {
-                    if (Console.KeyAvailable) // Note: requires console
-                    {
-                        int i = Console.ReadKey(true).KeyChar; // Note: requires console
-                        if (i == '\b' || i == '\r' || (i >= ' ' && i <= '~'))
-                        {
-                            if (i != '\r')
-                                Console.Write((char)i);
-                            if (i == '\b')
-                                i = 20; // DEL -- NOTE: doesn't work
-                            A = (byte)i;
-                            Z = (A == 0);
-                            N = ((A & 0x80) != 0);
-                            C = false;
+                A = CBM_Console.ReadChar();
 
-                            // RTS equivalent
-                            byte lo = base.Pop();
-                            byte hi = base.Pop();
-                            base.PC = (ushort)(((hi << 8) | lo) + 1);
+                // SetA equivalent for flags
+                Z = (A == 0);
+                N = ((A & 0x80) != 0);
+                C = false;
 
-                            return true; // overriden, so don't execute
-                        }
-                    }
-                    else
-                        System.Threading.Thread.Sleep(20); // be nice to CPU
-                }
+                // RTS equivalent
+                byte lo = base.Pop();
+                byte hi = base.Pop();
+                base.PC = (ushort)(((hi << 8) | lo) + 1);
+
+                return true; // overriden, so don't execute
             }
             return false; // execute normally
         }
