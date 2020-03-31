@@ -22,6 +22,7 @@ USAGE:
 
 LIMITATIONS:
 
+* Only keyboard/console I/O.  No text pokes, no graphics.  Just stdio.  No asynchronous input (GET K$), but INPUT S$ works.  No special Commodore keys, e.g. function keys, cursor keys, color keys, STOP/RESTORE, etc.
 * No keyboard color switching.  No border or border color.
 * No screen editing (gasp!) Just short and sweet for running C64 BASIC in terminal/console window via 6502 chip emulation in software
 * No PETSCII graphic characters, only supports printables CHR$(32) to CHR$(126).  But does support CHR$(147) for clear screen.
@@ -41,3 +42,5 @@ CREDITS:
 * Commodore 64 and VIC-20 BASIC/KERNAL ROM from [VICE](https://vice-emu.sourceforge.io/) or [Zimmers.net](http://www.zimmers.net/anonftp/pub/cbm/firmware/computers/c64/) or other
 * Inspired by [mist64/cbmbasic](https://github.com/mist64/cbmbasic)
 * Built with Microsoft Visual Studio 2017, .NET Framework 4, C#
+
+Read the blog Entry at [davevw.com](https://techwithdave.davevw.com/2020/03/simple-emu-c64.html)
