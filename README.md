@@ -6,7 +6,7 @@ Notable features
 * Emulates MOS6502
 * Runs as a Windows Console Program (can probably be ported elsewhere pretty easily, current source is C#)
 * Text based Commodore 64 BASIC and 6502 Assembly/Machine Code programs supported
-* only a few hooks: CHRIN-$FFCF/CHROUT-$FFD2/COLOR-$D021/199/646
+* only a few hooks: CHRIN-$FFCF/CHROUT-$FFD2/COLOR-$D021/199/646 (COLOR background/inverse $9001 on VIC-20)
 
 ![Sample.bas](https://github.com/davervw/simple-emu-c64/raw/master/Sample.png)
 
@@ -22,14 +22,13 @@ USAGE:
 
 LIMITATIONS:
 
-* Only keyboard/console I/O.  No text pokes, no graphics.  Just stdio.  No backspace.  No asynchronous input (GET K$), but INPUT S$ works.  No special Commodore keys, e.g. function keys, cursor keys, color keys, etc.
 * No keyboard color switching.  No border or border color.
 * No screen editing (gasp!) Just short and sweet for running C64 BASIC in terminal/console window via 6502 chip emulation in software
-* No PETSCII graphic characters, only supports printables CHR$(32) to CHR$(126)
-* No memory management.  Not full 64K RAM despite startup screen.
+* No PETSCII graphic characters, only supports printables CHR$(32) to CHR$(126).  But does support CHR$(147) for clear screen.
+* No memory management or banking.  Not full 64K RAM despite what the startup screen says.
    Just 44K RAM, 16K ROM, 1K VIC-II color RAM nybbles
 * No timers.  No interrupts except BRK.  No NMI/RESTORE key.  No STOP key.
-* No loading of files implemented.
+* No loading or saving of files implemented (but Windows clipboard works!)
 * Where do I plug in my cartridge?  What, no joystick?
 * Lightly tested.  Bugs are lurking! 
 
