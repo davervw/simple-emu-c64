@@ -52,7 +52,40 @@ namespace simple_emu_c64
                 ApplyColor?.Invoke();
                 Console.Write(c);
             }
-            else if (c == 147)
+            else if (c == 157) // left
+            {
+                if (Console.CursorLeft > 0)
+                    Console.Write('\b');
+                else if (Console.CursorTop > 0)
+                {
+                    --Console.CursorTop;
+                    Console.CursorLeft = Console.BufferWidth - 1;
+                }
+            }
+            else if (c == 29) // right
+            {
+                if (Console.CursorLeft < Console.BufferWidth-1)
+                    ++Console.CursorLeft;
+                else
+                    Console.WriteLine();
+            }
+            else if (c == 145) // up
+            {
+                if (Console.CursorTop > 0)
+                    --Console.CursorTop;
+            }
+            else if (c == 17) // down
+            {
+                int left = Console.CursorLeft;
+                Console.WriteLine();
+                Console.CursorLeft = left;
+            }
+            else if (c == 19) // home
+            {
+                Console.CursorTop = 0;
+                Console.CursorLeft = 0;
+            }
+            else if (c == 147) 
             {
                 try
                 {
