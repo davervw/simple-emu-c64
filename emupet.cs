@@ -36,7 +36,7 @@
 //
 // LIMITATIONS: See EmuC64
 //
-// PET 2001 MEMORY MAP
+// PET 2001 MEMORY MAP:
 //   $0000-$1FFF RAM (8k)
 //   $8000-$8FFF Video RAM
 //   $C000-$DFFF BASIC ROM (8K)
@@ -56,28 +56,9 @@ namespace simple_emu_c64
 {
     public class EmuPET : Emu6502
     {
-        public EmuPET(string basic_file, string edit_file, string kernal_file) : base(new byte[65536])
+        public EmuPET(string basic_file, string edit_file, string kernal_file) : base(new PETMemory(16*1024, basic_file, edit_file, kernal_file))
         {
-            byte[] basic_rom = File.ReadAllBytes(basic_file);
-            byte[] edit_rom = File.ReadAllBytes(edit_file);
-            byte[] kernal_rom = File.ReadAllBytes(kernal_file);
-
-            for (int i = 0; i < memory.Length; ++i)
-                memory[i] = 0;
-
-            Array.Copy(basic_rom, 0, memory, 0xC000, basic_rom.Length);
-            Array.Copy(edit_rom, 0, memory, 0xE000, edit_rom.Length);
-            Array.Copy(kernal_rom, 0, memory, 0xF000, kernal_rom.Length);
-
             trace = true; // trace in effect, to track down problem starting in monitor
-        }
-
-        protected override void SetMemory(ushort addr, byte value)
-        {
-            if (addr < 0x2000 || (addr >= 0x8000 && addr < 0x9000) || (addr >= 0xE800 && addr < 0xF000))
-            {
-                base.SetMemory(addr, value);
-            }
         }
 
         protected override bool ExecutePatch()
@@ -104,6 +85,75 @@ namespace simple_emu_c64
                 return true; // overriden, so don't execute
             }
             return false; // execute normally
+        }
+
+        class PETMemory : Emu6502.Memory
+        {
+            byte[] ram;
+            byte[] video_ram;
+            byte[] basic_rom;
+            byte[] edit_rom;
+            byte[] kernal_rom;
+            byte[] io;
+
+            const int video_addr = 0x8000;
+            const int video_size = 0x1000;
+            const int basic_addr = 0xC000;
+            const int edit_addr = 0xE000;
+            const int io_addr = 0xE800;
+            const int io_size = 0x0800;
+            const int kernal_addr = 0xF000;
+
+            public PETMemory(int ram_size, string basic_file, string edit_file, string kernal_file)
+            {
+                ram = new byte[ram_size];
+                io = new byte[io_size];
+                video_ram = new byte[video_size];
+                basic_rom = File.ReadAllBytes(basic_file);
+                edit_rom = File.ReadAllBytes(edit_file);
+                kernal_rom = File.ReadAllBytes(kernal_file);
+
+                for (int i = 0; i < ram.Length; ++i)
+                    ram[i] = 0;
+
+                for (int i = 0; i < video_ram.Length; ++i)
+                    video_ram[i] = 0;
+
+                for (int i = 0; i < io.Length; ++i)
+                    io[i] = 0;
+            }
+
+            public byte this[ushort addr]
+            {
+                get
+                {
+                    if (addr < ram.Length)
+                        return ram[addr];
+                    else if (addr >= video_addr && addr < video_addr + video_size)
+                        return video_ram[addr - video_addr];
+                    else if (addr >= basic_addr && addr < basic_addr + basic_rom.Length)
+                        return basic_rom[addr - basic_addr];
+                    else if (addr >= edit_addr && addr < edit_addr + edit_rom.Length)
+                        return edit_rom[addr - edit_addr];
+                    else if (addr >= io_addr && addr < io_addr + io.Length)
+                        return io[addr - io_addr];
+                    else if (addr >= kernal_addr && addr < kernal_addr + kernal_rom.Length)
+                        return kernal_rom[addr - kernal_addr];
+                    else
+                        return 0xFF;
+                }
+
+                set
+                {
+                    if (addr < ram.Length)
+                        ram[addr] = value;
+                    else if (addr >= video_addr && addr < video_addr + video_size)
+                        video_ram[addr - video_addr] = value;
+                    else if (addr >= io_addr && addr < io_addr + io_size)
+                        io[addr - io_addr] = value;
+                }
+
+            }
         }
     }
 }

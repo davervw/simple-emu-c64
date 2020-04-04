@@ -32,12 +32,23 @@
 
 using System;
 using System.Text;
+using System.Collections.Generic;
 
 namespace simple_emu_c64
 {
     public class Emu6502
     {
-        public byte[] memory = null;
+        public interface Memory
+        {
+            byte this[ushort index]
+            {
+                get;
+                set;
+            }
+        }
+
+        public Memory memory;
+        public HashSet<int> Breakpoints = new HashSet<int>();
 
         protected byte A = 0;
         protected byte X = 0;
@@ -55,7 +66,7 @@ namespace simple_emu_c64
         protected bool trace = false;
         protected bool step = false;
 
-        public Emu6502(byte[] memory)
+        public Emu6502(Memory memory)
         {
             this.memory = memory;
         }
@@ -90,7 +101,10 @@ namespace simple_emu_c64
                 while (true)
                 {
                     bytes = 1;
-                    if (trace)
+                    bool breakpoint = false;
+                    if (Breakpoints.Contains(PC))
+                        breakpoint = true;
+                    if (trace || breakpoint || step)
                     {
                         ushort addr2;
                         string line;
@@ -100,6 +114,8 @@ namespace simple_emu_c64
                         //Console.WriteLine(string.Format("{0}{1}", line.PadRight(30), state));
                         if (step)
                             step = step; // user can put debug breakpoint here to allow stepping
+                        if (breakpoint)
+                            breakpoint = breakpoint; // user can put debug breakpoint here to allow break
                     }
                     if (!ExecutePatch()) // allow execute to be overriden at a specific address
                         break;
@@ -440,12 +456,12 @@ namespace simple_emu_c64
 
         void Push(int value)
         {
-            SetMemory((ushort)(0x100 + (S--)), (byte)value);
+            memory[(ushort)(0x100 + (S--))] = (byte)value;
         }
 
         protected byte Pop()
         {
-            return memory[0x100 + (++S)];
+            return memory[(ushort)(0x100 + (++S))];
         }
 
         void PHP()
@@ -641,7 +657,7 @@ namespace simple_emu_c64
         {
             bytes = 3; // for next calculation
             ushort addr2 = (ushort)(addr + bytes - 1);
-            ushort addr3 = (ushort)(memory[addr + 1] | (memory[addr + 2] << 8));
+            ushort addr3 = (ushort)(memory[(ushort)(addr + 1)] | (memory[(ushort)(addr + 2)] << 8));
             Push(HI(addr2));
             Push(LO(addr2));
             addr = addr3;
@@ -668,15 +684,19 @@ namespace simple_emu_c64
         void JMP(ref ushort addr, out byte bytes)
         {
             bytes = 0; // caller should not advance address
-            ushort addr2 = (ushort)(memory[addr + 1] | (memory[addr + 2] << 8));
+            ushort addr2 = (ushort)(memory[(ushort)(addr + 1)] | (memory[(ushort)(addr + 2)] << 8));
             addr = addr2;
         }
 
         void JMPIND(ref ushort addr, out byte bytes)
         {
             bytes = 0; // caller should not advance address
-            ushort addr2 = (ushort)(memory[addr + 1] | (memory[addr + 2] << 8));
-            ushort addr3 = (ushort)(memory[addr2] | (memory[addr2 + 1] << 8));
+            ushort addr2 = (ushort)(memory[(ushort)(addr + 1)] | (memory[(ushort)(addr + 2)] << 8));
+            ushort addr3;
+            if ((addr2 & 0xFF) == 0xFF) // JMP($XXFF) won't go over page boundary
+                addr3 = (ushort)(memory[addr2] | (memory[(ushort)(addr2 - 0xFF)] << 8)); // 6502 "bug" - will use XXFF and XX00 as source of address
+            else
+                addr3 = (ushort)(memory[addr2] | (memory[(ushort)(addr2 + 1)] << 8));
             addr = addr3;
         }
 
@@ -705,134 +725,129 @@ namespace simple_emu_c64
         byte GetIndX(ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = (ushort)(memory[addr + 1] + X);
-            return memory[memory[addr2] | (memory[addr2 + 1] << 8)];
-        }
-
-        protected virtual void SetMemory(ushort addr, byte value)
-        {
-            memory[addr] = value;
+            ushort addr2 = (ushort)(memory[(ushort)(addr + 1)] + X);
+            return memory[(ushort)(memory[addr2] | (memory[(ushort)(addr2 + 1)] << 8))];
         }
 
         void SetIndX(byte value, ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = (ushort)(memory[addr + 1] + X);
-            ushort addr3 = (ushort)(memory[addr2] | (memory[addr2 + 1] << 8));
-            SetMemory(addr3, value);
+            ushort addr2 = (ushort)(memory[(ushort)(addr + 1)] + X);
+            ushort addr3 = (ushort)(memory[addr2] | (memory[(ushort)(addr2 + 1)] << 8));
+            memory[addr3] = value;
         }
 
         byte GetIndY(ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = (ushort)(memory[addr + 1]);
-            ushort addr3 = (ushort)((memory[addr2] | (memory[addr2 + 1] << 8)) + Y);
+            ushort addr2 = (ushort)(memory[(ushort)(addr + 1)]);
+            ushort addr3 = (ushort)((memory[addr2] | (memory[(ushort)(addr2 + 1)] << 8)) + Y);
             return memory[addr3];
         }
 
         void SetIndY(byte value, ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = (ushort)(memory[addr + 1]);
-            ushort addr3 = (ushort)((memory[addr2] | (memory[addr2 + 1] << 8)) + Y);
-            SetMemory(addr3, value);
+            ushort addr2 = (ushort)(memory[(ushort)(addr + 1)]);
+            ushort addr3 = (ushort)((memory[addr2] | (memory[(ushort)(addr2 + 1)] << 8)) + Y);
+            memory[addr3]=value;
         }
 
         byte GetZP(ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = memory[addr + 1];
+            ushort addr2 = memory[(ushort)(addr + 1)];
             return memory[addr2];
         }
 
         void SetZP(byte value, ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = memory[addr + 1];
-            SetMemory(addr2, value);
+            ushort addr2 = memory[(ushort)(addr + 1)];
+            memory[addr2]=value;
         }
 
         byte GetZPX(ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = memory[addr + 1];
+            ushort addr2 = memory[(ushort)(addr + 1)];
             return memory[(byte)(addr2 + X)];
         }
 
         void SetZPX(byte value, ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = memory[addr + 1];
-            SetMemory((byte)(addr2 + X), value);
+            ushort addr2 = memory[(ushort)(addr + 1)];
+            memory[(byte)(addr2 + X)] = value;
         }
 
         byte GetZPY(ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = memory[addr + 1];
+            ushort addr2 = memory[(ushort)(addr + 1)];
             return memory[(byte)(addr2 + Y)];
         }
 
         void SetZPY(byte value, ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = memory[addr + 1];
-            SetMemory((byte)(addr2 + Y), value);
+            ushort addr2 = memory[(ushort)(addr + 1)];
+            memory[(byte)(addr2 + Y)] = value;
         }
 
         byte GetABS(ushort addr, out byte bytes)
         {
             bytes = 3;
-            ushort addr2 = (ushort)(memory[addr + 1] | (memory[addr + 2] << 8));
+            ushort addr2 = (ushort)(memory[(ushort)(addr + 1)] | (memory[(ushort)(addr + 2)] << 8));
             return memory[addr2];
         }
 
         void SetABS(byte value, ushort addr, out byte bytes)
         {
             bytes = 3;
-            ushort addr2 = (ushort)(memory[addr + 1] | (memory[addr + 2] << 8));
-            SetMemory(addr2, value);
+            ushort addr2 = (ushort)(memory[(ushort)(addr + 1)] | (memory[(ushort)(addr + 2)] << 8));
+            memory[addr2] = value;
         }
 
         byte GetABSX(ushort addr, out byte bytes)
         {
             bytes = 3;
-            ushort addr2 = (ushort)(memory[addr + 1] | (memory[addr + 2] << 8));
-            return memory[addr2 + X];
+            ushort addr2 = (ushort)(memory[(ushort)(addr + 1)] | (memory[(ushort)(addr + 2)] << 8));
+            return memory[(ushort)(addr2 + X)];
         }
 
         void SetABSX(byte value, ushort addr, out byte bytes)
         {
             bytes = 3;
-            ushort addr2 = (ushort)((memory[addr + 1] | (memory[addr + 2] << 8)) + X);
-            SetMemory(addr2, value);
+            ushort addr2 = (ushort)((memory[(ushort)(addr + 1)] | (memory[(ushort)(addr + 2)] << 8)) + X);
+            memory[addr2] = value;
         }
 
         byte GetABSY(ushort addr, out byte bytes)
         {
             bytes = 3;
-            ushort addr2 = (ushort)(memory[addr + 1] | (memory[addr + 2] << 8));
-            return memory[addr2 + Y];
+            ushort addr2 = (ushort)(memory[(ushort)(addr + 1)] | (memory[(ushort)(addr + 2)] << 8));
+            return memory[(ushort)(addr2 + Y)];
         }
 
         void SetABSY(byte value, ushort addr, out byte bytes)
         {
             bytes = 3;
-            ushort addr2 = (ushort)((memory[addr + 1] | (memory[addr + 2] << 8)) + Y);
-            SetMemory(addr2, value);
+            ushort addr2 = (ushort)((memory[(ushort)(addr + 1)] | (memory[(ushort)(addr + 2)] << 8)) + Y);
+            memory [addr2] = value;
         }
 
         byte GetIM(ushort addr, out byte bytes)
         {
             bytes = 2;
-            return memory[addr + 1];
+            return memory[(ushort)(addr + 1)];
         }
 
         ushort GetBR(ushort addr, out bool conditional, out byte bytes)
         {
             conditional = true;
             bytes = 2;
-            sbyte offset = (sbyte)memory[addr + 1];
+            sbyte offset = (sbyte)memory[(ushort)(addr + 1)];
             ushort addr2 = (ushort)(addr + 2 + offset);
             return addr2;
         }
@@ -872,7 +887,7 @@ namespace simple_emu_c64
             for (int i = 0; i < 3; ++i)
             {
                 if (i < bytes)
-                    s.AppendFormat("{0:X2} ", memory[addr + i]);
+                    s.AppendFormat("{0:X2} ", memory[(ushort)(addr + i)]);
                 else
                     s.Append("   ");
             }
@@ -1065,77 +1080,77 @@ namespace simple_emu_c64
         string Ind(string opcode, ushort addr, out ushort addr2, out byte bytes)
         {
             bytes = 3;
-            ushort addr1 = (ushort)(memory[addr + 1] | (memory[addr + 2] << 8));
-            addr2 = (ushort)(memory[addr1] | (memory[addr1 + 1] << 8));
+            ushort addr1 = (ushort)(memory[(ushort)(addr + 1)] | (memory[(ushort)(addr + 2)] << 8));
+            addr2 = (ushort)(memory[addr1] | (memory[(ushort)(addr1 + 1)] << 8));
             return string.Format("{0} (${1:X4})", opcode, addr1);
         }
 
         string IndX(string opcode, ushort addr, out byte bytes)
         {
             bytes = 2;
-            return string.Format("{0} (${1:X2},X)", opcode, memory[addr + 1]);
+            return string.Format("{0} (${1:X2},X)", opcode, memory[(ushort)(addr + 1)]);
         }
 
         string IndY(string opcode, ushort addr, out byte bytes)
         {
             bytes = 2;
-            return string.Format("{0} (${1:X2}),Y", opcode, memory[addr + 1]);
+            return string.Format("{0} (${1:X2}),Y", opcode, memory[(ushort)(addr + 1)]);
         }
 
         string ZP(string opcode, ushort addr, out byte bytes)
         {
             bytes = 2;
-            return string.Format("{0} ${1:X2}", opcode, memory[addr + 1]);
+            return string.Format("{0} ${1:X2}", opcode, memory[(ushort)(addr + 1)]);
         }
 
         string ZPX(string opcode, ushort addr, out byte bytes)
         {
             bytes = 2;
-            return string.Format("{0} ${1:X2},X", opcode, memory[addr + 1]);
+            return string.Format("{0} ${1:X2},X", opcode, memory[(ushort)(addr + 1)]);
         }
 
         string ZPY(string opcode, ushort addr, out byte bytes)
         {
             bytes = 2;
-            return string.Format("{0} ${1:X2},Y", opcode, memory[addr + 1]);
+            return string.Format("{0} ${1:X2},Y", opcode, memory[(ushort)(addr + 1)]);
         }
 
         string ABS(string opcode, ushort addr, out byte bytes)
         {
             bytes = 3;
-            return string.Format("{0} ${1:X4}", opcode, memory[addr + 1] | (memory[addr + 2] << 8));
+            return string.Format("{0} ${1:X4}", opcode, memory[(ushort)(addr + 1)] | (memory[(ushort)(addr + 2)] << 8));
         }
 
         string ABS(string opcode, ushort addr, out ushort addr2, out byte bytes)
         {
             bytes = 3;
-            addr2 = (ushort)(memory[addr + 1] | (memory[addr + 2] << 8));
+            addr2 = (ushort)(memory[(ushort)(addr + 1)] | (memory[(ushort)(addr + 2)] << 8));
             return string.Format("{0} ${1:X4}", opcode, addr2);
         }
 
         string ABSX(string opcode, ushort addr, out byte bytes)
         {
             bytes = 3;
-            return string.Format("{0} ${1:X4},X", opcode, memory[addr + 1] | (memory[addr + 2] << 8));
+            return string.Format("{0} ${1:X4},X", opcode, memory[(ushort)(addr + 1)] | (memory[(ushort)(addr + 2)] << 8));
         }
 
         string ABSY(string opcode, ushort addr, out byte bytes)
         {
             bytes = 3;
-            return string.Format("{0} ${1:X4},Y", opcode, memory[addr + 1] | (memory[addr + 2] << 8));
+            return string.Format("{0} ${1:X4},Y", opcode, memory[(ushort)(addr + 1)] | (memory[(ushort)(addr + 2)] << 8));
         }
 
         string IM(string opcode, ushort addr, out byte bytes)
         {
             bytes = 2;
-            return string.Format("{0} #${1:X2}", opcode, memory[addr + 1]);
+            return string.Format("{0} #${1:X2}", opcode, memory[(ushort)(addr + 1)]);
         }
 
         string BR(string opcode, ushort addr, out bool conditional, out ushort addr2, out byte bytes)
         {
             bytes = 2;
             conditional = true;
-            sbyte offset = (sbyte)memory[addr + 1];
+            sbyte offset = (sbyte)memory[(ushort)(addr + 1)];
             addr2 = (ushort)(addr + 2 + offset);
             return string.Format("{0} ${1:X4}", opcode, addr2);
         }

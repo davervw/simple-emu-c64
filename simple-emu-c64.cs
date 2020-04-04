@@ -40,26 +40,49 @@ namespace simple_emu_c64
     {
         static void Main(string[] args)
         {
-            // recommend get basic, kernal ROM files from a C64 emulator such as https://vice-emu.sourceforge.io/index.html#download
+            // recommend get basic, kernal, etc. ROM files from a emulator such as https://vice-emu.sourceforge.io/index.html#download
             Emu6502 cbm = null;
             bool error = false;
+            int ram_size = 0;
+
+            Console.Error.WriteLine("6502 Emulator for Microsoft Windows Console: C64, VIC-20, TED, ...");
+            Console.Error.WriteLine("simple-emu-c64 version 1.3");
+            Console.Error.WriteLine("Copyright (c) 2020 by David R. Van Wagner ALL RIGHTS RESERVED");
+            Console.Error.WriteLine("davevw.com");
+            Console.Error.WriteLine("");
+            Console.Error.WriteLine("Open Source, MIT License: github.com/davervw/simple-emu-c64");
+            Console.Error.WriteLine("");
+            System.Threading.Thread.Sleep(2000);
 
             try
             {
+                if (args.Length > 2 && args[1].ToLower() == "ram")
+                    ram_size = int.Parse(args[2]) * 1024;
+
                 if (args.Length == 0 || args[0].ToLower() == "c64")
                 {
+                    if (ram_size == 0)
+                        ram_size = 64 * 1024;
                     if (File.Exists("basic") && File.Exists("kernal") && (!File.Exists("c64\\basic") || !File.Exists("c64\\kernal")))
-                        cbm = new EmuC64(basic_file: "basic", kernal_file: "kernal");
+                        cbm = new EmuC64(ram_size: ram_size, basic_file: "basic", kernal_file: "kernal");
                     else
-                        cbm = new EmuC64(basic_file: "c64\\basic", kernal_file: "c64\\kernal");
+                        cbm = new EmuC64(ram_size: ram_size, basic_file: "c64\\basic", kernal_file: "c64\\kernal");
                 }
                 else if (args.Length > 0 && args[0].ToLower() == "vic20")
                 {
-                    cbm = new EmuVIC20(char_file: "vic20\\chargen", basic_file: "vic20\\basic", kernal_file: "vic20\\kernal");
+                    cbm = new EmuVIC20(ram_size: ram_size, char_file: "vic20\\chargen", basic_file: "vic20\\basic", kernal_file: "vic20\\kernal");
                 }
                 else if (args.Length > 0 && args[0].ToLower() == "c16")
                 {
-                    cbm = new EmuC16(basic_file: "c16\\basic", kernal_file: "c16\\kernal");
+                    if (ram_size == 0)
+                        ram_size = 16 * 1024;
+                    cbm = new EmuTED(ram_size: ram_size, basic_file: "ted\\basic", kernal_file: "ted\\kernal");
+                }
+                else if (args.Length > 0 && args[0].ToLower() == "plus4" || args[0].ToLower() == "ted")
+                {
+                    if (ram_size == 0)
+                        ram_size = 64 * 1024;
+                    cbm = new EmuTED(ram_size: ram_size, basic_file: "ted\\basic", kernal_file: "ted\\kernal");
                 }
                 else if (args.Length > 0 && args[0].ToLower() == "pet")
                 {
@@ -78,17 +101,15 @@ namespace simple_emu_c64
 
             if (error)
             {
-                Console.Error.WriteLine("6502 Emulator for Microsoft Windows Console");
-                Console.Error.WriteLine("simple-emu-c64 version 1.3");
-                Console.Error.WriteLine("Copyright (c) 2020 by David R. Van Wagner ALL RIGHTS RESERVED");
-                Console.Error.WriteLine("davevw.com");
-                Console.Error.WriteLine("");
                 Console.Error.WriteLine("Usage:");
                 Console.Error.WriteLine("  simple-emu-c64     (with no arguments defaults to C64)");
-                Console.Error.WriteLine("  simple-emu-c64 c64 [walk [addr1 ...]]");
-                Console.Error.WriteLine("  simple-emu-c64 vic20 [walk [addr1 ...]]");
-                Console.Error.WriteLine("  simple-emu-c16 c16 [walk [addr1 ...]]");
-                Console.Error.WriteLine("  (with appropriate roms in c64 or vic20 folder)");
+                Console.Error.WriteLine("  simple-emu-c64 c64 [ram #]|[walk [addr1 ...]]");
+                Console.Error.WriteLine("  simple-emu-c64 vic20 [ram 4[-39]]|[walk [addr1 ...]]");
+                Console.Error.WriteLine("  simple-emu-c16 c16 [ram 16[-64]]|[walk [addr1 ...]]");
+                Console.Error.WriteLine("  simple-emu-c16 plus4 [ram 16[-64]]|[walk [addr1 ...]]");
+                Console.Error.WriteLine("  simple-emu-c16 ted [ram 16[-64]]|[walk [addr1 ...]]");
+                Console.Error.WriteLine("  (with appropriate roms in c64, vic20, or ted folder)");
+                Console.Error.WriteLine("  (note: only certain ram sizes are acceptable)");
                 return;
             }
 

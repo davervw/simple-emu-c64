@@ -36,24 +36,24 @@
 //
 // LIMITATIONS:
 // Only keyboard/console I/O.  No text pokes, no graphics.  Just stdio.  
-//   No backspace.  No asynchronous input (GET K$), but INPUT S$ works
-// No keyboard color switching.  No border or border color.
+//   No asynchronous input (GET K$), but INPUT S$ works
+// No keyboard color switching.  No border displayed.  No border color.
 // No screen editing (gasp!) Just short and sweet for running C64 BASIC in 
 //   terminal/console window via 6502 chip emulation in software
-// No PETSCII graphic characters, only supports printables CHR$(32) to CHR$(126)
-// No memory management.  Not full 64K RAM despite startup screen.
+// No PETSCII graphic characters, only supports printables CHR$(32) to CHR$(126), and CHR$(147) clear screen
+// No memory management.  Full 64K RAM not accessible via banking despite startup screen.
 //   Just 44K RAM, 16K ROM, 1K VIC-II color RAM nybbles
 // No timers.  No interrupts except BRK.  No NMI/RESTORE key.  No STOP key.
 // No loading of files implemented.
 //
 //   $00/$01     (DDR and banking and I/O of 6510 missing), just RAM
 //   $0000-$9FFF RAM (199=reverse if non-zero, 646=foreground color)
-//   $A000-$BFFF BASIC ROM (no RAM underneath)
+//   $A000-$BFFF BASIC ROM (write to RAM underneath, but haven't implemented read/banking)
 //   $C000-$CFFF RAM
 //   $D000-$DFFF (missing I/O and character ROM and RAM banks), just zeros except...
 //   $D021       Background Screen Color
-//   $D800-$DFFF VIC-II color RAM nybbles
-//   $E000-$FFFF KERNAL ROM (no RAM underneath)
+//   $D800-$DFFF VIC-II color RAM nybbles (note: haven't implemented RAM banking)
+//   $E000-$FFFF KERNAL ROM (write to RAM underneath, but haven't implemented read/banking)
 //
 // Requires user provided Commodore 64 BASIC/KERNAL ROMs (e.g. from VICE)
 //   as they are not provided, others copyrights may still be in effect.
@@ -72,41 +72,11 @@ namespace simple_emu_c64
 {
     public class EmuC64 : Emu6502
     {
-        public EmuC64(string basic_file, string kernal_file) : base(new byte[65536])
+        public EmuC64(int ram_size, string basic_file, string kernal_file) : base(new C64Memory(ram_size, basic_file, kernal_file))
         {
-            byte[] basic_rom = File.ReadAllBytes(basic_file);
-            byte[] kernal_rom = File.ReadAllBytes(kernal_file);
-
-            for (int i = 0; i < memory.Length; ++i)
-                memory[i] = 0;
-
-            Array.Copy(basic_rom, 0, memory, 0xA000, basic_rom.Length);
-            Array.Copy(kernal_rom, 0, memory, 0xE000, kernal_rom.Length);
-
 #if CBM_COLOR
             CBM_Console.ApplyColor = ApplyColor;
 #endif
-        }
-
-        protected override void SetMemory(ushort addr, byte value)
-        {
-            if (addr < 0xA000 || (addr >= 0xC000 && addr < 0xD000) || (addr >= 0xD800 && addr < 0xDC00)) // only allow writing to RAM (not ROM or I/O)
-            {
-                base.SetMemory(addr, value);
-            }
-            else if (addr == 0xD021) // background
-            {
-#if CBM_COLOR
-                bool reverse = (memory[199] != 0);
-
-                if (reverse)
-                    Console.ForegroundColor = ToConsoleColor(value);
-                else
-                    Console.BackgroundColor = ToConsoleColor(value);
-#endif
-
-                base.SetMemory(addr, (byte)(value & 0xF)); // store value so can be retrieved
-            }
         }
 
         private void ApplyColor()
@@ -178,7 +148,8 @@ namespace simple_emu_c64
         public override void Walk()
         {
             // in case cpu has not been reset, manually initialize low memory that will be called by BASIC and KERNAL ROM
-            Array.Copy(memory, 0xE3A2, memory, 0x73, 0x18); // CHRGET
+            for (int i = 0; i < 0x18; ++i)
+                memory[(ushort)(0x73 + i)] = memory[(ushort)(0xE3A2 + i)]; // CHARGET
 
             memory[0x300] = LO(0xE38B); // ERROR
             memory[0x301] = HI(0xE38B);
@@ -243,19 +214,19 @@ namespace simple_emu_c64
 
             for (ushort table = 0xA00C; table < 0xA051; table += 2) // BASIC Statements
             {
-                addr = (ushort)((memory[table] | (memory[table + 1] << 8)) + 1); // put on stack for RTS, so must add one
+                addr = (ushort)((memory[table] | (memory[(ushort)(table + 1)] << 8)) + 1); // put on stack for RTS, so must add one
                 Walk6502.Walk(this, addr);
             }
 
             for (ushort table = 0xA052; table < 0xA07F; table += 2) // Function Dispatch
             {
-                addr = (ushort)((memory[table] | (memory[table + 1] << 8)));
+                addr = (ushort)((memory[table] | (memory[(ushort)(table + 1)] << 8)));
                 Walk6502.Walk(this, addr);
             }
 
             for (ushort table = 0xA080; table < 0xA09D; table += 3) // Operator Dispatch
             {
-                addr = (ushort)((memory[table + 1] | (memory[table + 2] << 8)) + 1); // put on stack for RTS, so must add one
+                addr = (ushort)((memory[(ushort)(table + 1)] | (memory[(ushort)(table + 2)] << 8)) + 1); // put on stack for RTS, so must add one
                 Walk6502.Walk(this, addr);
             }
         }
@@ -268,6 +239,78 @@ namespace simple_emu_c64
         static byte HI(ushort value)
         {
             return (byte)(value >> 8);
+        }
+
+        class C64Memory : Emu6502.Memory
+        {
+            byte[] ram;
+            byte[] basic_rom;
+            byte[] kernal_rom;
+            byte[] io;
+
+            // note ram starts at 0x0000
+            const int basic_addr = 0xA000;
+            const int kernal_addr = 0xE000;
+            const int io_addr = 0xD000;
+            const int io_size = 0x1000; // note FF20-FF3F not used, shows up as RAM if present
+            const int color_addr = 0xD800;
+            const int color_size = 0x0400;
+            const int open_addr = 0xC000;
+            const int open_size = 0x1000;
+
+            public C64Memory(int ram_size, string basic_file, string kernal_file)
+            {
+                ram = new byte[ram_size];
+                basic_rom = File.ReadAllBytes(basic_file);
+                kernal_rom = File.ReadAllBytes(kernal_file);
+
+                for (int i = 0; i < ram.Length; ++i)
+                    ram[i] = 0;
+
+                io = new byte[io_size];
+                for (int i = 0; i < io.Length; ++i)
+                    io[i] = 0;
+            }
+
+            public byte this[ushort addr]
+            {
+                get
+                {
+                    if (addr < ram.Length && (addr < basic_addr || (addr >= open_addr && addr < open_addr+open_size)))
+                        return ram[addr];
+                    else if (addr >= basic_addr && addr < basic_addr + basic_rom.Length)
+                        return basic_rom[addr - basic_addr];
+                    else if (addr >= io_addr && addr < io_addr + io.Length)
+                        return io[addr - io_addr];
+                    else if (addr >= kernal_addr && addr < kernal_addr + kernal_rom.Length)
+                        return kernal_rom[addr - kernal_addr];
+                    else
+                        return 0xFF;
+                }
+
+                set
+                {
+                    if (addr < ram.Length && (addr < io_addr || (addr >= kernal_addr && addr < kernal_addr + kernal_rom.Length)))
+                        ram[addr] = value;
+                    else if (addr == 0xD021) // background
+                    {
+#if CBM_COLOR
+                        bool reverse = (memory[199] != 0);
+
+                        if (reverse)
+                            Console.ForegroundColor = ToConsoleColor(value);
+                        else
+                            Console.BackgroundColor = ToConsoleColor(value);
+#endif
+
+                        io[addr - io_addr] = (byte)(value & 0xF); // store value so can be retrieved
+                    }
+                    else if (addr >= color_addr && addr < color_addr + color_size)
+                        io[addr - io_addr] = value;
+                    //else if (addr >= io_addr && addr < io_addr + io.Length)
+                    //    io[addr - io_addr] = value;
+                }
+            }
         }
     }
 }
