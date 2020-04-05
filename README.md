@@ -1,5 +1,5 @@
 # simple-emu-c64 #
-Here is a simple Commodore 64 (, VIC-20, Commodore 16, Plus/4, ...) and 6502 Emulator I wrote from scratch.  Runs in a text console window.
+Here is a simple Commodore (64, PET 2001, VIC-20, Commodore 16, Plus/4, ...) and 6502 Emulator I wrote from scratch.  Runs in a text console window.
 
 Notable features
 
@@ -13,6 +13,7 @@ Notable features
 USAGE:
 
     simple-emu-c64
+    simple-emu-c64 help
     simple-emu-c64 c64 ram 4
     simple-emu-c64 c64
 	simple-emu-c64 c64 walk
@@ -23,6 +24,9 @@ USAGE:
     simple-emu-c64 vic20 ram 39
     simple-emu-c64 vic20 walk
     simple-emu-c64 vic20 walk FFD2 FFCF
+    simple-emu-c64 pet
+    simple-emu-c64 pet ram 32
+    simple-emu-c64 pet walk
     simple-emu-c64 c16
     simple-emu-c64 plus4
     simple-emu-c64 ted ram 32

@@ -56,14 +56,15 @@ namespace simple_emu_c64
 {
     public class EmuPET : Emu6502
     {
-        public EmuPET(string basic_file, string edit_file, string kernal_file) : base(new PETMemory(16*1024, basic_file, edit_file, kernal_file))
+        public EmuPET(int ram_size, string basic_file, string edit_file, string kernal_file) : base(new PETMemory(ram_size, basic_file, edit_file, kernal_file))
         {
-            trace = true; // trace in effect, to track down problem starting in monitor
         }
 
         protected override bool ExecutePatch()
         {
-            if (base.PC == 0xFFD2) // CHROUT
+            if (base.PC == (ushort)(memory[0xFFFC] | (memory[0xFFFD] << 8)))
+                Console.Clear(); // PET 2001 doesn't initialize screen with chr$(147), so must do it here
+            else if (base.PC == 0xFFD2) // CHROUT
             {
                 CBM_Console.WriteChar((char)A);
                 // fall through to draw character in screen memory too
@@ -106,6 +107,9 @@ namespace simple_emu_c64
 
             public PETMemory(int ram_size, string basic_file, string edit_file, string kernal_file)
             {
+                if (ram_size > 32 * 1024)
+                    throw new InvalidOperationException("Invalid RAM Length");
+
                 ram = new byte[ram_size];
                 io = new byte[io_size];
                 video_ram = new byte[video_size];
@@ -135,6 +139,8 @@ namespace simple_emu_c64
                         return basic_rom[addr - basic_addr];
                     else if (addr >= edit_addr && addr < edit_addr + edit_rom.Length)
                         return edit_rom[addr - edit_addr];
+                    else if (addr == 0xE810) // PORT A
+                        return 0xFF; // return FF otherwise hangs on start, key scan?
                     else if (addr >= io_addr && addr < io_addr + io.Length)
                         return io[addr - io_addr];
                     else if (addr >= kernal_addr && addr < kernal_addr + kernal_rom.Length)
@@ -152,7 +158,6 @@ namespace simple_emu_c64
                     else if (addr >= io_addr && addr < io_addr + io_size)
                         io[addr - io_addr] = value;
                 }
-
             }
         }
     }

@@ -46,13 +46,18 @@ namespace simple_emu_c64
             int ram_size = 0;
 
             Console.Error.WriteLine("6502 Emulator for Microsoft Windows Console: C64, VIC-20, TED, ...");
-            Console.Error.WriteLine("simple-emu-c64 version 1.3");
-            Console.Error.WriteLine("Copyright (c) 2020 by David R. Van Wagner ALL RIGHTS RESERVED");
+            Console.Error.WriteLine("simple-emu-c64 version 1.4");
+            Console.Error.WriteLine("Copyright (c) 2020 by David R. Van Wagner");
             Console.Error.WriteLine("davevw.com");
             Console.Error.WriteLine("");
             Console.Error.WriteLine("Open Source, MIT License: github.com/davervw/simple-emu-c64");
             Console.Error.WriteLine("");
-            System.Threading.Thread.Sleep(2000);
+            Console.Error.WriteLine("Usage:");
+            Console.Error.WriteLine("  simple-emu-c64                     (no arguments pauses, then starts c64)");
+            Console.Error.WriteLine("  simple-emu-c64 help                (shows usage)");
+            Console.Error.WriteLine("  simple-emu-c64 [system] {ram #}    (system=[c64|vic20|pet|c16|plus4|ted])");
+            Console.Error.WriteLine("  simple-emu-c64 [system] walk [addr 1 ...]");
+            Console.Error.WriteLine("");
 
             try
             {
@@ -86,7 +91,9 @@ namespace simple_emu_c64
                 }
                 else if (args.Length > 0 && args[0].ToLower() == "pet")
                 {
-                    cbm = new EmuPET(basic_file: "pet\\basic2", edit_file: "pet\\edit2b", kernal_file: "pet\\kernal2");
+                    if (ram_size == 0)
+                        ram_size = 8 * 1024;
+                    cbm = new EmuPET(ram_size: ram_size, basic_file: "pet\\basic1", edit_file: "pet\\edit1g", kernal_file: "pet\\kernal1");
                 }
                 else
                 {
@@ -100,18 +107,9 @@ namespace simple_emu_c64
             }
 
             if (error)
-            {
-                Console.Error.WriteLine("Usage:");
-                Console.Error.WriteLine("  simple-emu-c64     (with no arguments defaults to C64)");
-                Console.Error.WriteLine("  simple-emu-c64 c64 [ram #]|[walk [addr1 ...]]");
-                Console.Error.WriteLine("  simple-emu-c64 vic20 [ram 4[-39]]|[walk [addr1 ...]]");
-                Console.Error.WriteLine("  simple-emu-c16 c16 [ram 16[-64]]|[walk [addr1 ...]]");
-                Console.Error.WriteLine("  simple-emu-c16 plus4 [ram 16[-64]]|[walk [addr1 ...]]");
-                Console.Error.WriteLine("  simple-emu-c16 ted [ram 16[-64]]|[walk [addr1 ...]]");
-                Console.Error.WriteLine("  (with appropriate roms in c64, vic20, or ted folder)");
-                Console.Error.WriteLine("  (note: only certain ram sizes are acceptable)");
                 return;
-            }
+            else if (args.Length == 0) // if no arguments present, then keep credits on screen for couple seconds
+                System.Threading.Thread.Sleep(5000);
 
             if (args.Length >= 2 && args[1].ToLower() == "walk")
             {
