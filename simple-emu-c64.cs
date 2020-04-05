@@ -45,7 +45,7 @@ namespace simple_emu_c64
             bool error = false;
             int ram_size = 0;
 
-            Console.Error.WriteLine("6502 Emulator for Microsoft Windows Console: C64, VIC-20, TED, ...");
+            Console.Error.WriteLine("6502 Emulator for Microsoft Windows Console: C64, VIC-20, PET, TED, ...");
             Console.Error.WriteLine("simple-emu-c64 version 1.4");
             Console.Error.WriteLine("Copyright (c) 2020 by David R. Van Wagner");
             Console.Error.WriteLine("davevw.com");
