@@ -46,7 +46,7 @@ namespace simple_emu_c64
             int ram_size = 0;
 
             Console.Error.WriteLine("6502 Emulator for Microsoft Windows Console: C64, VIC-20, PET, TED, ...");
-            Console.Error.WriteLine("simple-emu-c64 version 1.4");
+            Console.Error.WriteLine("simple-emu-c64 version 1.5");
             Console.Error.WriteLine("Copyright (c) 2020 by David R. Van Wagner");
             Console.Error.WriteLine("davevw.com");
             Console.Error.WriteLine("");
@@ -72,6 +72,9 @@ namespace simple_emu_c64
                         cbm = new EmuC64(ram_size: ram_size, basic_file: "basic", kernal_file: "kernal");
                     else
                         cbm = new EmuC64(ram_size: ram_size, basic_file: "c64\\basic", kernal_file: "c64\\kernal");
+
+                    if ((args.Length == 2 || args.Length == 4) && File.Exists(args[args.Length-1]))
+                        ((EmuC64)cbm).StartupPRG = args[args.Length - 1];
                 }
                 else if (args.Length > 0 && args[0].ToLower() == "vic20")
                 {
@@ -108,8 +111,12 @@ namespace simple_emu_c64
 
             if (error)
                 return;
-            else if (args.Length == 0) // if no arguments present, then keep credits on screen for couple seconds
+            else if (args.Length == 0) // if no arguments present, then keep credits on screen for a bit
+            {
+                Console.Write("Starting...");
                 System.Threading.Thread.Sleep(5000);
+                Console.WriteLine();
+            }
 
             if (args.Length >= 2 && args[1].ToLower() == "walk")
             {

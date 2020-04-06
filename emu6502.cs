@@ -47,7 +47,7 @@ namespace simple_emu_c64
             }
         }
 
-        public Memory memory;
+        protected Memory memory;
         public HashSet<int> Breakpoints = new HashSet<int>();
 
         protected byte A = 0;
@@ -454,7 +454,7 @@ namespace simple_emu_c64
             return (byte)value;
         }
 
-        void Push(int value)
+        protected void Push(int value)
         {
             memory[(ushort)(0x100 + (S--))] = (byte)value;
         }

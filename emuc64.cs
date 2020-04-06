@@ -72,16 +72,24 @@ namespace simple_emu_c64
 {
     public class EmuC64 : Emu6502
     {
+        readonly ConsoleColor startup_fg = Console.ForegroundColor;
+        readonly ConsoleColor startup_bg = Console.BackgroundColor;
+
         public EmuC64(int ram_size, string basic_file, string kernal_file) : base(new C64Memory(ram_size, basic_file, kernal_file))
         {
-#if CBM_COLOR
             CBM_Console.ApplyColor = ApplyColor;
-#endif
+        }
+
+        public string StartupPRG
+        {
+            get;
+            set;
         }
 
         private void ApplyColor()
         {
             bool reverse = (memory[199] != 0);
+#if CBM_COLOR
             if (reverse)
             {
                 Console.BackgroundColor = ToConsoleColor(memory[646]);
@@ -92,16 +100,30 @@ namespace simple_emu_c64
                 Console.ForegroundColor = ToConsoleColor(memory[646]);
                 Console.BackgroundColor = ToConsoleColor(memory[0xD021]);
             }
+#else
+            if (reverse)
+            {
+                Console.BackgroundColor = startup_fg;
+                Console.ForegroundColor = startup_bg;
+            }
+            else
+            {
+                Console.ForegroundColor = startup_fg;
+                Console.BackgroundColor = startup_bg;
+            }
+#endif
         }
+
+        int startup_state = 0;
 
         protected override bool ExecutePatch()
         {
-            if (base.PC == 0xFFD2) // CHROUT
+            if (PC == 0xFFD2) // CHROUT
             {
                 CBM_Console.WriteChar((char)A);
                 // fall through to draw character in screen memory too
             }
-            else if (base.PC == 0xFFCF) // CHRIN
+            else if (PC == 0xFFCF) // CHRIN
             {
                 A = CBM_Console.ReadChar();
 
@@ -111,11 +133,82 @@ namespace simple_emu_c64
                 C = false;
 
                 // RTS equivalent
-                byte lo = base.Pop();
-                byte hi = base.Pop();
-                base.PC = (ushort)(((hi << 8) | lo) + 1);
+                byte lo = Pop();
+                byte hi = Pop();
+                PC = (ushort)(((hi << 8) | lo) + 1);
 
-                return true; // overriden, so don't execute
+                return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
+            }
+            else if (PC == 0xA474) // READY
+            {
+                if (StartupPRG?.Length > 0) // User requested program be loaded at startup
+                {
+                    string filename = StartupPRG;
+                    StartupPRG = null;
+
+                    if (((C64Memory)memory).LoadPRG(filename))
+                    {
+                        StartupPRG = null;
+
+                        //UNNEW that I used in late 1980s, should work well for loading a program too, probably gleaned from BASIC ROM
+                        //ldy #0
+                        //lda #1
+                        //sta(43),y
+                        //iny
+                        //sta(43),y
+                        //jsr $a533 ; LINKPRG
+                        //clc
+                        //lda $22
+                        //adc #2
+                        //sta 45
+                        //lda $23
+                        //adc #0
+                        //sta 46
+                        //lda #0
+                        //jsr $a65e ; CLEAR/CLR
+                        //jmp $a474 ; READY
+
+                        // This part shouldn't be necessary as we have loaded, not recovering from NEW, bytes should still be there
+                        ushort addr = (ushort)(memory[43] | (memory[44] << 8));
+                        memory[addr] = 1;
+                        memory[(ushort)(addr + 1)] = 1;
+
+                        // JSR equivalent
+                        ushort retaddr = (ushort)(PC - 1);
+                        Push(HI(retaddr));
+                        Push(LO(retaddr));
+                        PC = 0xA533; // LINKPRG
+
+                        startup_state = 1; // should be able to regain control when returns...
+
+                        return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
+                    }
+                }
+                else if (startup_state == 1)
+                {
+                    ushort addr = (ushort)(memory[0x22] | (memory[0x23] << 8) + 2);
+                    memory[45] = (byte)addr;
+                    memory[46] = (byte)(addr >> 8);
+
+                    // JSR equivalent
+                    ushort retaddr = (ushort)(PC - 1);
+                    Push(HI(retaddr));
+                    Push(LO(retaddr));
+                    PC = 0xA65E; // CLEAR/CLR
+                    A = 0;
+
+                    startup_state = 2; // should be able to regain control when returns...
+
+                    return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
+                }
+                else if (startup_state == 2)
+                {
+                    CBM_Console.Push("RUN\r");
+                    PC = 0xA47B; // skip READY message, but still set direct mode, and continue to MAIN
+                    C = false;
+                    startup_state = 0;
+                    return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
+                }
             }
             return false; // execute normally
         }
@@ -310,6 +403,26 @@ namespace simple_emu_c64
                     //else if (addr >= io_addr && addr < io_addr + io.Length)
                     //    io[addr - io_addr] = value;
                 }
+            }
+
+            // returns true if BASIC
+            internal bool LoadPRG(string filename)
+            {
+                bool result;
+                byte[] prg = File.ReadAllBytes(filename);
+                ushort loadaddr;
+                if (prg[0] == 1)
+                {
+                    loadaddr = (ushort)(ram[43] | (ram[44] << 8));
+                    result = true;
+                }
+                else
+                {
+                    loadaddr = (ushort)(prg[0] | (prg[1] << 8));
+                    result = false;
+                }
+                Array.Copy(prg, 2, ram, loadaddr, prg.Length - 2);
+                return result;
             }
         }
     }

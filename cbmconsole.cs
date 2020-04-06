@@ -132,5 +132,10 @@ namespace simple_emu_c64
             buffer.RemoveAt(0);
             return (byte)c;
         }
+
+        public static void Push(string s)
+        {
+            buffer.AddRange(s);
+        }
     }
 }
