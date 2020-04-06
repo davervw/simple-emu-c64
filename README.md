@@ -16,6 +16,7 @@ USAGE:
     simple-emu-c64 help
     simple-emu-c64 c64 ram 4
     simple-emu-c64 c64
+    simple-emu-c64 c64 startup.prg
 	simple-emu-c64 c64 walk
 	simple-emu-c64 c64 walk FFD2
     simple-emu-c64 vic20
@@ -37,7 +38,7 @@ LIMITATIONS:
 * Only keyboard/console I/O.  No text pokes, no graphics.  Just stdio.  No asynchronous input (GET K$), but INPUT S$ works.  No special Commodore keys, e.g. function keys, cursor keys, color keys, STOP/RESTORE, etc.
 * No keyboard color switching.  No border or border color.
 * No screen editing (gasp!) Just short and sweet for running Commodore BASIC in terminal/console window via 6502 chip emulation in software
-* No PETSCII graphic characters, only supports printables CHR$(32) to CHR$(126).  But does support CHR$(147) for clear screen.
+* No PETSCII graphic characters, only supports printables CHR$(32) to CHR$(126).  But does support CHR$(147) for clear screen and Home/Left/Right/Up/Down characters too (output only).
 * No C64 memory management or banking.  C64 emulation can't access the full 64K RAM despite what the startup screen says.  
    C64: just 44K RAM (almost 38K for BASIC), 16K ROM, 1K VIC-II color RAM nybbles
 * Plus/4 implementation has banking enabled, can access almost 60K RAM for BASIC!
