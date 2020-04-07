@@ -7,7 +7,7 @@
 //
 // MIT License
 //
-// Copyright(c) 2020 by David R.Van Wagner ALL RIGHTS RESERVED
+// Copyright(c) 2020 by David R.Van Wagner
 // davevw.com
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy

@@ -7,7 +7,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2020 by David R. Van Wagner ALL RIGHTS RESERVED
+// Copyright (c) 2020 by David R. Van Wagner
 // davevw.com
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -345,7 +345,7 @@ namespace simple_emu_c64
             const int basic_addr = 0xA000;
             const int kernal_addr = 0xE000;
             const int io_addr = 0xD000;
-            const int io_size = 0x1000; // note FF20-FF3F not used, shows up as RAM if present
+            const int io_size = 0x1000;
             const int color_addr = 0xD800;
             const int color_size = 0x0400;
             const int open_addr = 0xC000;
