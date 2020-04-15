@@ -63,7 +63,7 @@ namespace simple_emu_c64
         protected override bool ExecutePatch()
         {
             if (base.PC == (ushort)(memory[0xFFFC] | (memory[0xFFFD] << 8)))
-                Console.Clear(); // PET 2001 doesn't initialize screen with chr$(147), so must do it here
+                CBM_Console.WriteChar((char)147, true); // PET 2001 doesn't initialize screen with chr$(147), so must do it here, supressing next home
             else if (base.PC == 0xFFD2) // CHROUT
             {
                 CBM_Console.WriteChar((char)A);

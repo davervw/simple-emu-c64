@@ -37,16 +37,24 @@ namespace simple_emu_c64
 {
     public class CBM_Console
     {
+        static bool supress_next_clear = true;
+        static bool supress_next_home = false;
+        static bool supress_next_cr = false;
         static List<char> buffer = new List<char>();
 
         public static ApplyColorDelegate ApplyColor = null; // optionally apply color when displaying characters
         public delegate void ApplyColorDelegate();
 
-        public static void WriteChar(char c)
+        public static void WriteChar(char c, bool supress_next_home=false)
         {
             // we're emulating, so draw character on local console window
             if (c == 0x0D)
-                Console.WriteLine();
+            {
+                if (supress_next_cr)
+                    supress_next_cr = false;
+                else
+                    Console.WriteLine();
+            }
             else if (c >= ' ' && c <= '~')
             {
                 ApplyColor?.Invoke();
@@ -64,7 +72,7 @@ namespace simple_emu_c64
             }
             else if (c == 29) // right
             {
-                if (Console.CursorLeft < Console.BufferWidth-1)
+                if (Console.CursorLeft < Console.BufferWidth - 1)
                     ++Console.CursorLeft;
                 else
                     Console.WriteLine();
@@ -82,20 +90,33 @@ namespace simple_emu_c64
             }
             else if (c == 19) // home
             {
-                Console.CursorTop = 0;
-                Console.CursorLeft = 0;
+                if (CBM_Console.supress_next_home) // use class static here, if arg set, will set for next time
+                {
+                    CBM_Console.supress_next_home = false;
+                }
+                else
+                {
+                    Console.CursorTop = 0;
+                    Console.CursorLeft = 0;
+                }
             }
-            else if (c == 147) 
+            else if (c == 147)
             {
                 try
                 {
-                    Console.Clear();
+                    if (supress_next_clear)
+                        supress_next_clear = false;
+                    else
+                        Console.Clear();
                 }
                 catch (Exception)
                 {
                     // ignore exception, e.g. not a console
                 }
             }
+
+            if (supress_next_home)
+                CBM_Console.supress_next_home = true;
         }
 
         // blocking read to get next typed character
@@ -126,7 +147,8 @@ namespace simple_emu_c64
                 ApplyColor?.Invoke();
                 buffer.AddRange(Console.ReadLine());
                 buffer.Add('\r');
-                Console.SetCursorPosition(Console.CursorLeft, Console.CursorTop - 1); // Up one line
+                //Console.SetCursorPosition(Console.CursorLeft, Console.CursorTop - 1); // Up one line
+                supress_next_cr = true;
             }
             char c = buffer[0];
             buffer.RemoveAt(0);

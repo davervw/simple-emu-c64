@@ -46,17 +46,10 @@ namespace simple_emu_c64
             int ram_size = 0;
 
             Console.Error.WriteLine("6502 Emulator for Microsoft Windows Console: C64, VIC-20, PET, TED, ...");
-            Console.Error.WriteLine("simple-emu-c64 version 1.5");
-            Console.Error.WriteLine("Copyright (c) 2020 by David R. Van Wagner");
+            Console.Error.WriteLine("simple-emu-c64 version 1.6");
+            Console.Error.WriteLine("Copyright (c) 2020 David R. Van Wagner");
             Console.Error.WriteLine("davevw.com");
-            Console.Error.WriteLine("");
             Console.Error.WriteLine("Open Source, MIT License: github.com/davervw/simple-emu-c64");
-            Console.Error.WriteLine("");
-            Console.Error.WriteLine("Usage:");
-            Console.Error.WriteLine("  simple-emu-c64                     (no arguments pauses, then starts c64)");
-            Console.Error.WriteLine("  simple-emu-c64 help                (shows usage)");
-            Console.Error.WriteLine("  simple-emu-c64 [system] {ram #}    (system=[c64|vic20|pet|c16|plus4|ted])");
-            Console.Error.WriteLine("  simple-emu-c64 [system] walk [addr 1 ...]");
             Console.Error.WriteLine("");
 
             try
@@ -69,9 +62,9 @@ namespace simple_emu_c64
                     if (ram_size == 0)
                         ram_size = 64 * 1024;
                     if (File.Exists("basic") && File.Exists("kernal") && (!File.Exists("c64\\basic") || !File.Exists("c64\\kernal")))
-                        cbm = new EmuC64(ram_size: ram_size, basic_file: "basic", kernal_file: "kernal");
+                        cbm = new EmuC64(ram_size: ram_size, basic_file: "basic", chargen_file: "c64\\chargen", kernal_file: "kernal");
                     else
-                        cbm = new EmuC64(ram_size: ram_size, basic_file: "c64\\basic", kernal_file: "c64\\kernal");
+                        cbm = new EmuC64(ram_size: ram_size, basic_file: "c64\\basic", chargen_file: "c64\\chargen", kernal_file: "c64\\kernal");
 
                     if ((args.Length == 2 || args.Length == 4) && File.Exists(args[args.Length-1]))
                         ((EmuC64)cbm).StartupPRG = args[args.Length - 1];
@@ -111,10 +104,15 @@ namespace simple_emu_c64
 
             if (error)
                 return;
-            else if (args.Length == 0) // if no arguments present, then keep credits on screen for a bit
+            else if (args.Length == 0) // if no arguments present, then show usage as well
             {
-                Console.Write("Starting...");
-                System.Threading.Thread.Sleep(5000);
+                Console.Error.WriteLine("");
+                Console.Error.WriteLine("Usage:");
+                Console.Error.WriteLine("  simple-emu-c64                     (no arguments pauses, then starts c64)");
+                Console.Error.WriteLine("  simple-emu-c64 help                (shows usage)");
+                Console.Error.WriteLine("  simple-emu-c64 [system] {ram #}    (system=[c64|vic20|pet|c16|plus4|ted])");
+                Console.Error.WriteLine("  simple-emu-c64 [system] walk [addr 1 ...]");
+                Console.Error.WriteLine("");
                 Console.WriteLine();
             }
 
