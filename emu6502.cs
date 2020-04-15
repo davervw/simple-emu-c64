@@ -73,7 +73,7 @@ namespace simple_emu_c64
 
         public void ResetRun()
         {
-            ushort addr = (ushort)((memory[0xFFFC] | (memory[0xFFFD] << 8))); // RESET vector
+            ushort addr = (ushort)((memory[0xFFFC] | (memory[0xFFFD] << 8))); // JMP(RESET)
             Execute(addr);
         }
 
@@ -291,22 +291,11 @@ namespace simple_emu_c64
                     case 0xFE: SetABSX(INC(GetABSX(PC, out bytes)), PC, out bytes); break;
 
                     default:
-                        throw new Exception(string.Format("Invalid opcode {0:X2}", memory[PC]));
+                        throw new Exception(string.Format("Invalid opcode {0:X2} at {0:X4}", memory[PC], PC));
                 }
 
                 PC += bytes;
             }
-        }
-
-        void BRK(out byte bytes)
-        {
-            ++PC;
-            PHP();
-            Push(HI(PC));
-            Push(LO(PC));
-            B = true;
-            PC = (ushort)(memory[0xFFFE] + (memory[0xFFFF] << 8));
-            bytes = 0;
         }
 
         void CMP(byte value)
@@ -675,10 +664,21 @@ namespace simple_emu_c64
         void RTI(ref ushort addr, out byte bytes)
         {
             PLP();
-            byte hi = Pop();
             byte lo = Pop();
+            byte hi = Pop();
             bytes = 0; // make sure caller does not increase addr by one
             addr = (ushort)((hi << 8) | lo);
+        }
+
+        void BRK(out byte bytes)
+        {
+            ++PC;
+            Push(HI(PC));
+            Push(LO(PC));
+            PHP();
+            B = true;
+            PC = (ushort)(memory[0xFFFE] + (memory[0xFFFF] << 8)); // JMP(IRQ)
+            bytes = 0;
         }
 
         void JMP(ref ushort addr, out byte bytes)

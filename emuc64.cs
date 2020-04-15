@@ -32,28 +32,26 @@
 //
 // This is a 6502 Emulator, designed for running Commodore 64 text mode, 
 //   with only a few hooks: CHRIN-$FFCF/CHROUT-$FFD2/COLOR-$D021/199/646
+//   and implemented RAM/ROM/IO banking
 // Useful as is in current state as a simple 6502 emulator
 //
 // LIMITATIONS:
 // Only keyboard/console I/O.  No text pokes, no graphics.  Just stdio.  
-//   No asynchronous input (GET K$), but INPUT S$ works
+//   No asynchronous input (GET K$) or key scan codes, but INPUT S$ works
 // No keyboard color switching.  No border displayed.  No border color.
 // No screen editing (gasp!) Just short and sweet for running C64 BASIC in 
 //   terminal/console window via 6502 chip emulation in software
 // No PETSCII graphic characters, only supports printables CHR$(32) to CHR$(126), and CHR$(147) clear screen
-// No memory management.  Full 64K RAM not accessible via banking despite startup screen.
-//   Just 44K RAM, 16K ROM, 1K VIC-II color RAM nybbles
 // No timers.  No interrupts except BRK.  No NMI/RESTORE key.  No STOP key.
 // No loading of files implemented.
 //
-//   $00/$01     (DDR and banking and I/O of 6510 missing), just RAM
-//   $0000-$9FFF RAM (199=reverse if non-zero, 646=foreground color)
-//   $A000-$BFFF BASIC ROM (write to RAM underneath, but haven't implemented read/banking)
-//   $C000-$CFFF RAM
-//   $D000-$DFFF (missing I/O and character ROM and RAM banks), just zeros except...
+//   $00/$01     (DDR and banking and I/O of 6510), RAM effectively hidden (haven't implemented techniques to access it)
+//   $0000-$FFFF RAM (199=reverse if non-zero, 646=foreground color), note banking required for some address ranges, see $01
+//   $A000-$BFFF BASIC ROM
+//   $D000-$D7FF I/O
 //   $D021       Background Screen Color
-//   $D800-$DFFF VIC-II color RAM nybbles (note: haven't implemented RAM banking)
-//   $E000-$FFFF KERNAL ROM (write to RAM underneath, but haven't implemented read/banking)
+//   $D800-$DFFF VIC-II color RAM nybbles
+//   $E000-$FFFF KERNAL ROM
 //
 // Requires user provided Commodore 64 BASIC/KERNAL ROMs (e.g. from VICE)
 //   as they are not provided, others copyrights may still be in effect.
@@ -75,7 +73,7 @@ namespace simple_emu_c64
         readonly ConsoleColor startup_fg = Console.ForegroundColor;
         readonly ConsoleColor startup_bg = Console.BackgroundColor;
 
-        public EmuC64(int ram_size, string basic_file, string kernal_file) : base(new C64Memory(ram_size, basic_file, kernal_file))
+        public EmuC64(int ram_size, string basic_file, string chargen_file, string kernal_file) : base(new C64Memory(ram_size, basic_file, chargen_file, kernal_file))
         {
             CBM_Console.ApplyColor = ApplyColor;
         }
@@ -300,10 +298,16 @@ namespace simple_emu_c64
 
             base.Walk(); // reset seen, and walk the RESET vector
 
+            ushort addr;
+
+            addr = (ushort)(memory[0xFFFE] | (memory[0xFFFF] << 8)); // IRQ
+            Walk6502.Walk(this, addr);
+
+            addr = (ushort)(memory[0xFFFA] | (memory[0xFFFB] << 8)); // NMI
+            Walk6502.Walk(this, addr);
+
             // Portion of MAIN, CRUNCH and GONE(Execute) or MAIN1(Store line)
             Walk6502.Walk(this, 0xA494);
-
-            ushort addr;
 
             for (ushort table = 0xA00C; table < 0xA051; table += 2) // BASIC Statements
             {
@@ -338,6 +342,7 @@ namespace simple_emu_c64
         {
             byte[] ram;
             byte[] basic_rom;
+            byte[] char_rom;
             byte[] kernal_rom;
             byte[] io;
 
@@ -351,10 +356,11 @@ namespace simple_emu_c64
             const int open_addr = 0xC000;
             const int open_size = 0x1000;
 
-            public C64Memory(int ram_size, string basic_file, string kernal_file)
+            public C64Memory(int ram_size, string basic_file, string chargen_file, string kernal_file)
             {
                 ram = new byte[ram_size];
                 basic_rom = File.ReadAllBytes(basic_file);
+                char_rom = File.ReadAllBytes(chargen_file);
                 kernal_rom = File.ReadAllBytes(kernal_file);
 
                 for (int i = 0; i < ram.Length; ++i)
@@ -363,19 +369,37 @@ namespace simple_emu_c64
                 io = new byte[io_size];
                 for (int i = 0; i < io.Length; ++i)
                     io[i] = 0;
+
+                ram[0] = 0xEF;
+                ram[1] = 0x07;
             }
 
             public byte this[ushort addr]
             {
                 get
                 {
-                    if (addr < ram.Length && (addr < basic_addr || (addr >= open_addr && addr < open_addr+open_size)))
+                    if (addr <= ram.Length - 1 // note: handles option to have less than 64K RAM
+                          && (
+                            addr < basic_addr // always RAM
+                            || (addr >= open_addr && addr < open_addr + open_size) // always open RAM C000.CFFF
+                            || (((ram[1] & 3) != 3) && addr >= basic_addr && addr < basic_addr + basic_rom.Length) // RAM banked instead of BASIC
+                            || (((ram[1] & 2) == 0) && addr >= kernal_addr && addr <= kernal_addr + kernal_rom.Length - 1) // RAM banked instead of KERNAL
+                            || (((ram[1] & 3) == 0) && addr >= io_addr && addr < io_addr + io.Length) // RAM banked instead of IO
+                          )
+                        )
                         return ram[addr];
                     else if (addr >= basic_addr && addr < basic_addr + basic_rom.Length)
                         return basic_rom[addr - basic_addr];
                     else if (addr >= io_addr && addr < io_addr + io.Length)
-                        return io[addr - io_addr];
-                    else if (addr >= kernal_addr && addr < kernal_addr + kernal_rom.Length)
+                    {
+                        if ((ram[1] & 4) == 0)
+                            return char_rom[addr - io_addr];
+                        else if (addr >= color_addr && addr < color_addr + color_size)
+                            return (byte)(io[addr - io_addr] | 0xF0); // set high bits to show this is a nybble
+                        else
+                            return io[addr - io_addr];
+                    }
+                    else if (addr >= kernal_addr && addr <= kernal_addr + kernal_rom.Length - 1)
                         return kernal_rom[addr - kernal_addr];
                     else
                         return 0xFF;
@@ -383,19 +407,19 @@ namespace simple_emu_c64
 
                 set
                 {
-                    if (addr < ram.Length && (addr < io_addr || (addr >= kernal_addr && addr < kernal_addr + kernal_rom.Length)))
-                        ram[addr] = value;
+                    if (addr <= ram.Length - 1  // note: handles option to have less than 64K RAM
+                          && (
+                            addr < io_addr // RAM, including open RAM, and RAM under BASIC
+                            || (addr >= kernal_addr && addr <= kernal_addr + kernal_rom.Length - 1) // RAM under KERNAL
+                            || (((ram[1] & 7) == 0) && addr >= io_addr && addr < io_addr + io.Length) // RAM banked in instead of IO
+                          )
+                        )
+                        ram[addr] = value; // banked RAM, and RAM under ROM
                     else if (addr == 0xD021) // background
                     {
 #if CBM_COLOR
-                        bool reverse = (memory[199] != 0);
-
-                        if (reverse)
-                            Console.ForegroundColor = ToConsoleColor(value);
-                        else
-                            Console.BackgroundColor = ToConsoleColor(value);
+                        Console.BackgroundColor = ToConsoleColor(value);
 #endif
-
                         io[addr - io_addr] = (byte)(value & 0xF); // store value so can be retrieved
                     }
                     else if (addr >= color_addr && addr < color_addr + color_size)

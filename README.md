@@ -39,8 +39,7 @@ LIMITATIONS:
 * No keyboard color switching.  No border or border color.
 * No screen editing (gasp!) Just short and sweet for running Commodore BASIC in terminal/console window via 6502 chip emulation in software
 * No PETSCII graphic characters, only supports printables CHR$(32) to CHR$(126).  But does support CHR$(147) for clear screen and Home/Left/Right/Up/Down characters too (output only).
-* No C64 memory management or banking.  C64 emulation can't access the full 64K RAM despite what the startup screen says.  
-   C64: just 44K RAM (almost 38K for BASIC), 16K ROM, 1K VIC-II color RAM nybbles
+* C64 RAM/ROM/IO/CHARGEN banking is implemented!
 * Plus/4 implementation has banking enabled, can access almost 60K RAM for BASIC!
 * VIC-20 memory is configurable, can access almost 28K RAM for BASIC!
 * No timers.  No interrupts except BRK.  No NMI/RESTORE key.  No STOP key.
