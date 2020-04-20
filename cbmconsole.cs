@@ -155,6 +155,44 @@ namespace simple_emu_c64
             return (byte)c;
         }
 
+        public static byte GetIn()
+        {
+            if (buffer.Count > 0)
+                return ReadChar();
+            else if (Console.KeyAvailable)
+            {
+                var key = Console.ReadKey(true);
+                return (byte)key.KeyChar;
+            }
+            else
+                return 0;
+        }
+
+        public static bool CheckStop()
+        {
+            if (buffer.Count > 0)
+            {
+                if (buffer.Contains('\x1B'))
+                    return true;
+            }
+
+            if (Console.KeyAvailable)
+            {
+                var key = Console.ReadKey(true);
+                if (key.KeyChar == '\x1B') // ESC
+                {
+                    buffer.Clear();
+                    return true;
+                }
+                else if (key.KeyChar != 0)
+                {
+                    Push(key.KeyChar.ToString());
+                }
+            }
+
+            return false;
+        }
+
         public static void Push(string s)
         {
             buffer.AddRange(s);

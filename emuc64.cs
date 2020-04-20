@@ -32,26 +32,34 @@
 //
 // This is a 6502 Emulator, designed for running Commodore 64 text mode, 
 //   with only a few hooks: CHRIN-$FFCF/CHROUT-$FFD2/COLOR-$D021/199/646
-//   and implemented RAM/ROM/IO banking
+//   and implemented RAM/ROM/IO banking (BASIC could live without these)
+//   additional hooks added: READY/GETIN/STOP (could live without these)
+//   READY hook is used to load program specified on command line
 // Useful as is in current state as a simple 6502 emulator
 //
 // LIMITATIONS:
 // Only keyboard/console I/O.  No text pokes, no graphics.  Just stdio.  
-//   No asynchronous input (GET K$) or key scan codes, but INPUT S$ works
+//   No key scan codes (197), or keyboard buffer (198, 631-640), but INPUT S$ works
 // No keyboard color switching.  No border displayed.  No border color.
 // No screen editing (gasp!) Just short and sweet for running C64 BASIC in 
 //   terminal/console window via 6502 chip emulation in software
-// No PETSCII graphic characters, only supports printables CHR$(32) to CHR$(126), and CHR$(147) clear screen
-// No timers.  No interrupts except BRK.  No NMI/RESTORE key.  No STOP key.
+// No PETSCII graphic characters, only supports printables CHR$(32) to CHR$(126), 
+//   and CHR$(147) clear screen, home/up/down/left/right, reverse on/off
+// No timers.  No interrupts except BRK.  No NMI/RESTORE key.  ESC is STOP key.
 // No loading of files implemented.
 //
-//   $00/$01     (DDR and banking and I/O of 6510), RAM effectively hidden (haven't implemented techniques to access it)
-//   $0000-$FFFF RAM (199=reverse if non-zero, 646=foreground color), note banking required for some address ranges, see $01
+//   $00         (data direction missing)
+//   $01         Banking implemented (tape sense/controls missing)
+//   $0000-$9FFF RAM (upper limit may vary based on MCU SRAM available)
 //   $A000-$BFFF BASIC ROM
-//   $D000-$D7FF I/O
-//   $D021       Background Screen Color
-//   $D800-$DFFF VIC-II color RAM nybbles
+//   $A000-$BFFF Banked LORAM (may not be present based on MCU SRAM limits)
+//   $C000-$CFFF RAM
+//   $D000-$D7FF (I/O missing, reads as zeros)
+//   $D800-$DFFF VIC-II color RAM nybbles in I/O space (1K x 4bits)
+//   $D000-$DFFF Banked RAM (may not be present based on MCU SRAM limits)
+//   $D000-$DFFF Banked Character ROM
 //   $E000-$FFFF KERNAL ROM
+//   $E000-$FFFF Banked HIRAM (may not be present based on MCU SRAM limits)
 //
 // Requires user provided Commodore 64 BASIC/KERNAL ROMs (e.g. from VICE)
 //   as they are not provided, others copyrights may still be in effect.
@@ -65,6 +73,7 @@
 
 using System;
 using System.IO;
+using System.Text;
 
 namespace simple_emu_c64
 {
@@ -207,6 +216,45 @@ namespace simple_emu_c64
                     startup_state = 0;
                     return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
                 }
+            }
+            else if (PC == 0xF13E) // GETIN
+            {
+                //BASIC TEST:
+                //10 GET K$ : REM GETIN
+                //20 IF K$<> "" THEN PRINT ASC(K$)
+                //25 IF K$= "Q" THEN END
+                //30 GOTO 10
+
+                A = CBM_Console.GetIn();
+                if (A == 0)
+                {
+                    Z = true;
+                    C = false;
+                }
+                else
+                {
+                    X = A;
+                    Z = false;
+                    C = false;
+                }
+
+                // RTS equivalent
+                byte lo = Pop();
+                byte hi = Pop();
+                PC = (ushort)(((hi << 8) | lo) + 1);
+
+                return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
+            }
+            else if (PC == 0xF6ED) // STOP
+            {
+                Z = CBM_Console.CheckStop();
+
+                // RTS equivalent
+                byte lo = Pop();
+                byte hi = Pop();
+                PC = (ushort)(((hi << 8) | lo) + 1);
+
+                return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
             }
             return false; // execute normally
         }
@@ -370,6 +418,7 @@ namespace simple_emu_c64
                 for (int i = 0; i < io.Length; ++i)
                     io[i] = 0;
 
+                // initialize DDR and memory mapping to defaults
                 ram[0] = 0xEF;
                 ram[1] = 0x07;
             }
