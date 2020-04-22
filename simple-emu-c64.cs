@@ -45,11 +45,14 @@ namespace simple_emu_c64
             bool error = false;
             int ram_size = 0;
 
-            Console.Error.WriteLine("6502 Emulator for Microsoft Windows Console: C64, VIC-20, PET, TED, ...");
+            Console.Error.WriteLine("6502 Emulator for Windows Console");
+            Console.Error.WriteLine("C64, VIC-20, PET, TED, ...");
+            Console.Error.WriteLine("");
             Console.Error.WriteLine("simple-emu-c64 version 1.6");
             Console.Error.WriteLine("Copyright (c) 2020 David R. Van Wagner");
             Console.Error.WriteLine("davevw.com");
-            Console.Error.WriteLine("Open Source, MIT License: github.com/davervw/simple-emu-c64");
+            Console.Error.WriteLine("Open Source, MIT License");
+            Console.Error.WriteLine("github.com/davervw/simple-emu-c64");
             Console.Error.WriteLine("");
 
             try
@@ -66,7 +69,7 @@ namespace simple_emu_c64
                     else
                         cbm = new EmuC64(ram_size: ram_size, basic_file: "c64\\basic", chargen_file: "c64\\chargen", kernal_file: "c64\\kernal");
 
-                    if ((args.Length == 2 || args.Length == 4) && File.Exists(args[args.Length-1]))
+                    if ((args.Length == 2 || args.Length == 4) && (File.Exists(args[args.Length-1]) || File.Exists(args[args.Length - 1]+".prg")))
                         ((EmuC64)cbm).StartupPRG = args[args.Length - 1];
                 }
                 else if (args.Length > 0 && args[0].ToLower() == "vic20")
