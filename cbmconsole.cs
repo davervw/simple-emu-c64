@@ -48,7 +48,7 @@ namespace simple_emu_c64
         public static void WriteChar(char c, bool supress_next_home=false)
         {
             // we're emulating, so draw character on local console window
-            if (c == 0x0D)
+            if (c == 0x0D || c == 0x8D)
             {
                 if (supress_next_cr)
                     supress_next_cr = false;
@@ -114,6 +114,10 @@ namespace simple_emu_c64
                     // ignore exception, e.g. not a console
                 }
             }
+            else
+            {
+                //System.Diagnostics.Debug.WriteLine(string.Format("Unprintable {0:X2}", (int)c));
+            }
 
             if (supress_next_home)
                 CBM_Console.supress_next_home = true;
@@ -122,25 +126,6 @@ namespace simple_emu_c64
         // blocking read to get next typed character
         public static byte ReadChar()
         {
-            ////OLD VERSION - BACKSPACE DIDN'T WORK
-            //while (true)
-            //{
-            //    if (Console.KeyAvailable) // Note: requires console
-            //    {
-            //        int i = Console.ReadKey(true).KeyChar; // Note: requires console
-            //        if (i == '\b' || i == '\r' || (i >= ' ' && i <= '~'))
-            //        {
-            //            if (i != '\r')
-            //                Console.Write((char)i);
-            //            if (i == '\b')
-            //                i = 20; // DEL -- NOTE: doesn't work
-            //            return (byte)i;
-            //        }
-            //    }
-            //    else
-            //        System.Threading.Thread.Sleep(20); // be nice to CPU
-            //}
-
             if (buffer.Count == 0)
             {
                 // System.Console.ReadLine() has features of history (cursor up/down, F7/F8), editing (cursor left/right, delete, backspace, etc.)

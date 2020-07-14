@@ -39,18 +39,30 @@
 // MEMORY MAP:
 //   $0000-$3FFF 16K RAM, note repeats $4000-$7FFF, $8000-$BFFF, $C000-$FFFF
 //   ($0000-$7FFF 32K RAM, note repeats $8000-$FFFF)
-//   ($0000-$FFFF 64K RAM)
+//   ($0000-$FFFF 64K RAM minus non-banked portions, upper RAM can be banked to ROM)
 //   $8000-$BFFF BASIC ROM
 //   $FC00-$FCFF NON-BANKED KERNAL ROM (but can be banked to RAM)
 //   $FD00-$FF3F I/O Registers (never banked, not even to RAM)
 //   $FDD0-$FDDF ROM config addresses (A1/A0: BASIC/FUNCT/CART/RESV, A3/A2: KERNAL/FUNCT/CART/RESV)
-//   $FF3E bank to ROM
-//   $FF3F bank to RAM
-//   $C000-$FFFF KERNAL ROM
+//   $FF3E write banks to ROM
+//   $FF3F write banks to RAM
+//   $C000-$FFFF KERNAL ROM (minus I/O, can be banked to RAM)
 //
 // Requires user provided Commodore 16 BASIC/KERNAL ROMs (e.g. from VICE)
 //   as they are not provided, others copyrights may still be in effect.
 //
+// ROM has easter egg for credits
+//   SYS 52650
+//
+// Function ROMs not implemented 
+// (because not supporting screen editing and key scan codes yet)
+// but this looks interesting for future reference:
+//   https://www.rift.dk/commodore-16-internal-function-rom/
+//
+//
+// Credits to
+//   Commodore Source https://github.com/mist64/cbmsrc
+//   C16 and Plus/4 Memory Map https://www.floodgap.com/retrobits/ckb/secret/264memory.txt
 ////////////////////////////////////////////////////////////////////////////////
 
 using System;
@@ -58,36 +70,156 @@ using System.IO;
 
 namespace simple_emu_c64
 {
-    public class EmuTED : Emu6502
+    public class EmuTED : EmuCBM
     {
         public EmuTED(int ram_size, string basic_file, string kernal_file) : base(new TEDMemory(ram_size, basic_file, kernal_file))
         {
+            CBM_Console.ApplyColor = ApplyColor;
         }
+
+        private static void ApplyColor(bool reverse)
+        {
+            if (reverse)
+            {
+                Console.BackgroundColor = startup_fg;
+                Console.ForegroundColor = startup_bg;
+            }
+            else
+            {
+                Console.ForegroundColor = startup_fg;
+                Console.BackgroundColor = startup_bg;
+            }
+        }
+
+        private static bool Reverse(Emu6502.Memory memory)
+        {
+            return (memory[194] != 0);
+        }
+
+        private void ApplyColor()
+        {
+            ApplyColor(Reverse(memory));
+        }
+
+        private int startup_state = 0;
+        private int go_state = 0;
 
         protected override bool ExecutePatch()
         {
-            if (base.PC == 0xFFD2) // CHROUT
+            if (PC == 0x8703 || PC == LOAD_TRAP) // READY
             {
-                CBM_Console.WriteChar((char)A);
-                // fall through to draw character in screen memory too
+                go_state = 0;
+
+                if (StartupPRG != null) // User requested program be loaded at startup
+                {
+                    bool is_basic;
+                    if (PC == LOAD_TRAP)
+                    {
+                        is_basic = (
+                            FileVerify == false
+                            && FileSec == 0 // relative load, not absolute
+                            && LO(FileAddr) == memory[43] // requested load address matches BASIC start
+                            && HI(FileAddr) == memory[44]);
+                        memory[0xFF3F] = 0; // switch to RAM
+                        bool success = FileLoad(out byte err);
+                        memory[0xFF3E] = 0; // switch to ROM
+                        if (!success)
+                        {
+                            System.Diagnostics.Debug.WriteLine(string.Format("FileLoad() failed: err={0}, file {1}", err, StartupPRG));
+                            C = true; // signal error
+                            SetA(err); // FILE NOT FOUND or VERIFY
+
+                            // so doesn't repeat
+                            StartupPRG = null;
+                            LOAD_TRAP = -1;
+
+                            return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
+                        }
+                    }
+                    else
+                    {
+                        FileName = StartupPRG;
+                        FileAddr = (ushort)(memory[43] | (memory[44] << 8));
+                        memory[0xFF3F] = 0; // switch to RAM
+                        is_basic = LoadStartupPrg();
+                        memory[0xFF3E] = 0; // switch to ROM
+                    }
+
+                    StartupPRG = null;
+
+                    if (is_basic)
+                    {
+                        // initialize first couple bytes (may only be necessary for UNNEW?)
+                        ushort addr = (ushort)(memory[43] | (memory[44] << 8));
+                        memory[addr] = 1;
+                        memory[(ushort)(addr + 1)] = 1;
+
+                        startup_state = 1; // should be able to regain control when returns...
+
+                        return ExecuteJSR(0x8818); // LINKPRG
+                    }
+                    else
+                    {
+                        LOAD_TRAP = -1;
+                        X = LO(FileAddr);
+                        Y = HI(FileAddr);
+                        C = false;
+                    }
+                }
+                else if (startup_state == 1)
+                {
+                    ushort addr = (ushort)(memory[0x22] | (memory[0x23] << 8) + 2);
+                    memory[45] = (byte)addr;
+                    memory[46] = (byte)(addr >> 8);
+
+                    SetA(0);
+
+                    startup_state = 2; // should be able to regain control when returns...
+
+                    return ExecuteJSR(0x8A98); // CLEAR/CLR
+                }
+                else if (startup_state == 2)
+                {
+                    if (PC == LOAD_TRAP)
+                    {
+                        X = LO(FileAddr);
+                        Y = HI(FileAddr);
+                    }
+                    else
+                    {
+                        CBM_Console.Push("RUN\r");
+                        PC = 0x8706; // skip READY message, but still set direct mode, and continue to MAIN
+                    }
+                    C = false; // signal success
+                    startup_state = 0;
+                    LOAD_TRAP = -1;
+                    return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
+                }
             }
-            else if (base.PC == 0xFFCF) // CHRIN
+            else if (PC == 0x8C77) // Execute after GO
             {
-                A = CBM_Console.ReadChar();
-
-                // SetA equivalent for flags
-                Z = (A == 0);
-                N = ((A & 0x80) != 0);
-                C = false;
-
-                // RTS equivalent
-                byte lo = base.Pop();
-                byte hi = base.Pop();
-                base.PC = (ushort)(((hi << 8) | lo) + 1);
-
-                return true; // overriden, so don't execute
+                if (go_state == 0 && A >= (byte)'0' && A <= (byte)'9')
+                {
+                    go_state = 1;
+                    return ExecuteJSR(0x8E3E); // Get integer into $14/$15
+                }
+                else if (go_state == 1)
+                {
+                    Program.go_num = (ushort)(memory[0x14] + (memory[0x15] << 8));
+                    exit = true;
+                    return true;
+                }
+                else
+                    go_state = 0;
             }
-            return false; // execute normally
+            else if (PC == 0xFFBD) // SETNAM
+            {
+                memory[0xFF3F] = 0; // switch to RAM
+                bool retvalue = base.ExecutePatch();
+                memory[0xFF3E] = 0; // switch to ROM
+                return retvalue;
+            }
+            return base.ExecutePatch();
         }
 
         class TEDMemory : Emu6502.Memory
@@ -132,8 +264,12 @@ namespace simple_emu_c64
 
             public TEDMemory(int ram_size, string basic_file, string kernal_file)
             {
-                if (ram_size != 16 * 1024 && ram_size != 32 * 1024 && ram_size != 64 * 1024)
-                    throw new InvalidOperationException("Invalid RAM Length");
+                if (ram_size < 32 * 1024)
+                    ram_size = 16 * 1024;
+                else if (ram_size < 64 * 1024)
+                    ram_size = 32 * 1024;
+                else
+                    ram_size = 64 * 1024;
 
                 ram = new byte[ram_size];
                 basic_rom = File.ReadAllBytes(basic_file);

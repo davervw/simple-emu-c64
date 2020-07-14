@@ -38,6 +38,8 @@ namespace simple_emu_c64
 {
     class Program
     {
+        static public ushort go_num = 0;
+
         static void Main(string[] args)
         {
             // recommend get basic, kernal, etc. ROM files from a emulator such as https://vice-emu.sourceforge.io/index.html#download
@@ -132,7 +134,58 @@ namespace simple_emu_c64
             }
             else
             {
-                cbm.ResetRun();
+                while (true)
+                {
+                    cbm.ResetRun();
+                    if (go_num == 0)
+                    {
+                        Console.WriteLine("BYE.");
+                        break;
+                    }
+                    if (go_num != 2001 && go_num != 20 && go_num != 64 && go_num != 16 && go_num != 4)
+                    {
+                        Console.WriteLine("INVALID QUANTITY  ERROR");
+                        break;
+                    }
+                    else
+                    {
+                        Console.Write("RAM (in kilobytes)? ");
+                        string line = Console.ReadLine();
+                        float ram_kilobytes;
+                        if (!float.TryParse(line, out ram_kilobytes))
+                        {
+                            Console.WriteLine("TYPE MISMATCH  ERROR");
+                            break;
+                        }
+                        else
+                        {
+                            ram_size = (int)(ram_kilobytes * 1024);
+                            try
+                            {
+                                if (go_num == 2001)
+                                    cbm = new EmuPET(ram_size: ram_size, basic_file: "pet\\basic1", edit_file: "pet\\edit1g", kernal_file: "pet\\kernal1");
+                                else if (go_num == 20)
+                                    cbm = new EmuVIC20(ram_size: ram_size, char_file: "vic20\\chargen", basic_file: "vic20\\basic", kernal_file: "vic20\\kernal");
+                                else if (go_num == 64)
+                                {
+                                    if (File.Exists("basic") && File.Exists("kernal") && (!File.Exists("c64\\basic") || !File.Exists("c64\\kernal")))
+                                        cbm = new EmuC64(ram_size: ram_size, basic_file: "basic", chargen_file: "c64\\chargen", kernal_file: "kernal");
+                                    else
+                                        cbm = new EmuC64(ram_size: ram_size, basic_file: "c64\\basic", chargen_file: "c64\\chargen", kernal_file: "c64\\kernal");
+                                }
+                                else if (go_num == 16 || go_num == 4)
+                                {
+                                    cbm = new EmuTED(ram_size: ram_size, basic_file: "ted\\basic", kernal_file: "ted\\kernal");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.Write(ex.Message);
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         }
 

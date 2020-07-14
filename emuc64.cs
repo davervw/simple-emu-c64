@@ -50,16 +50,16 @@
 //
 //   $00         (data direction missing)
 //   $01         Banking implemented (tape sense/controls missing)
-//   $0000-$9FFF RAM (upper limit may vary based on MCU SRAM available)
+//   $0000-$9FFF RAM (upper limit may vary based on RAM allocated)
 //   $A000-$BFFF BASIC ROM
-//   $A000-$BFFF Banked LORAM (may not be present based on MCU SRAM limits)
+//   $A000-$BFFF Banked LORAM (may not be present based on RAM allocated)
 //   $C000-$CFFF RAM
 //   $D000-$D7FF (I/O missing, reads as zeros)
 //   $D800-$DFFF VIC-II color RAM nybbles in I/O space (1K x 4bits)
-//   $D000-$DFFF Banked RAM (may not be present based on MCU SRAM limits)
+//   $D000-$DFFF Banked RAM (may not be present based on RAM allocated)
 //   $D000-$DFFF Banked Character ROM
 //   $E000-$FFFF KERNAL ROM
-//   $E000-$FFFF Banked HIRAM (may not be present based on MCU SRAM limits)
+//   $E000-$FFFF Banked HIRAM (may not be present based on RAM allocated)
 //
 // Requires user provided Commodore 64 BASIC/KERNAL ROMs (e.g. from VICE)
 //   as they are not provided, others copyrights may still be in effect.
@@ -77,32 +77,15 @@ using System.Text;
 
 namespace simple_emu_c64
 {
-    public class EmuC64 : Emu6502
+    public class EmuC64 : EmuCBM
     {
-        readonly ConsoleColor startup_fg = Console.ForegroundColor;
-        readonly ConsoleColor startup_bg = Console.BackgroundColor;
-
         public EmuC64(int ram_size, string basic_file, string chargen_file, string kernal_file) : base(new C64Memory(ram_size, basic_file, chargen_file, kernal_file))
         {
             CBM_Console.ApplyColor = ApplyColor;
         }
 
-        public string StartupPRG
+        private static void ApplyColor(bool reverse)
         {
-            get;
-            set;
-        }
-
-        string FileName = null;
-        byte FileNum = 0;
-        byte FileDev = 0;
-        byte FileSec = 0;
-        bool FileVerify = false;
-        ushort FileAddr = 0;
-
-        private void ApplyColor()
-        {
-            bool reverse = (memory[199] != 0);
 #if CBM_COLOR
             if (reverse)
             {
@@ -128,34 +111,42 @@ namespace simple_emu_c64
 #endif
         }
 
-        int startup_state = 0;
-        int LOAD_TRAP = -1;
+        private static bool Reverse(Emu6502.Memory memory)
+        {
+            return (memory[199] != 0);
+        }
 
+        private void ApplyColor()
+        {
+            ApplyColor(Reverse(memory));
+        }
+
+        private int startup_state = 0;
+        private int go_state = 0;
+
+        // C64 patches
+        //   34/35 ($22/$23) = INDEX, temporary BASIC pointer, set before CLR
+        //   43/44 = start of BASIC program in RAM
+        //   45/46 = end of BASIC program in RAM, start of variables
+        //   $A474 = ROM BASIC READY prompt
+        //   $A47B = ROM BASIC MAIN, in direct mode but skip READY prompt
+        //   $A533 = ROM LNKPRG/LINKPRG
+        //   $A65E = CLEAR/CLR - erase variables
+        //   $A815 = EXECUTE after parsing GO token
+        //   $AD8A = Evaluate expression, check data type
+        //   $B7F7 = Convert floating point to 2 byte integer Y/A
         protected override bool ExecutePatch()
         {
-            if (PC == 0xFFD2) // CHROUT
+            if (PC == 0xa7e4 && !trace) // execute statement
             {
-                CBM_Console.WriteChar((char)A);
-                // fall through to draw character in screen memory too
-            }
-            else if (PC == 0xFFCF) // CHRIN
-            {
-                A = CBM_Console.ReadChar();
-
-                // SetA equivalent for flags
-                Z = (A == 0);
-                N = ((A & 0x80) != 0);
-                C = false;
-
-                // RTS equivalent
-                byte lo = Pop();
-                byte hi = Pop();
-                PC = (ushort)(((hi << 8) | lo) + 1);
-
-                return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
+                trace = true;
+                return true; // call again, so traces this line
             }
             else if (PC == 0xA474 || PC == LOAD_TRAP) // READY
             {
+                trace = false;
+                go_state = 0;
+
                 if (StartupPRG != null) // User requested program be loaded at startup
                 {
                     bool is_basic;
@@ -166,12 +157,11 @@ namespace simple_emu_c64
                             && FileSec == 0 // relative load, not absolute
                             && LO(FileAddr) == memory[43] // requested load address matches BASIC start
                             && HI(FileAddr) == memory[44]);
-                        byte err;
-                        if (!FileLoad(out err))
+                        if (!FileLoad(out byte err))
                         {
                             System.Diagnostics.Debug.WriteLine(string.Format("FileLoad() failed: err={0}, file {1}", err, StartupPRG));
                             C = true; // signal error
-                            A = err; // FILE NOT FOUND or VERIFY
+                            SetA(err); // FILE NOT FOUND or VERIFY
 
                             // so doesn't repeat
                             StartupPRG = null;
@@ -181,7 +171,11 @@ namespace simple_emu_c64
                         }
                     }
                     else
-                        is_basic = ((C64Memory)memory).LoadStartupPrg(StartupPRG, out FileAddr);
+                    {
+                        FileName = StartupPRG;
+                        FileAddr = (ushort)(memory[43] | (memory[44] << 8));
+                        is_basic = LoadStartupPrg();
+                    }
 
                     StartupPRG = null;
 
@@ -211,15 +205,9 @@ namespace simple_emu_c64
                         memory[addr] = 1;
                         memory[(ushort)(addr + 1)] = 1;
 
-                        // JSR equivalent
-                        ushort retaddr = (ushort)(PC - 1);
-                        Push(HI(retaddr));
-                        Push(LO(retaddr));
-                        PC = 0xA533; // LINKPRG
-
                         startup_state = 1; // should be able to regain control when returns...
 
-                        return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
+                        return ExecuteJSR(0xA533); // LINKPRG
                     }
                     else
                     {
@@ -235,16 +223,11 @@ namespace simple_emu_c64
                     memory[45] = (byte)addr;
                     memory[46] = (byte)(addr >> 8);
 
-                    // JSR equivalent
-                    ushort retaddr = (ushort)(PC - 1);
-                    Push(HI(retaddr));
-                    Push(LO(retaddr));
-                    PC = 0xA65E; // CLEAR/CLR
-                    A = 0;
+                    SetA(0);
 
                     startup_state = 2; // should be able to regain control when returns...
 
-                    return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
+                    return ExecuteJSR(0xA65E); // CLEAR/CLR
                 }
                 else if (startup_state == 2)
                 {
@@ -264,113 +247,27 @@ namespace simple_emu_c64
                     return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
                 }
             }
-            else if (PC == 0xF13E) // GETIN
+            else if (PC == 0xA815) // Execute after GO
             {
-                //BASIC TEST:
-                //10 GET K$ : REM GETIN
-                //20 IF K$<> "" THEN PRINT ASC(K$)
-                //25 IF K$= "Q" THEN END
-                //30 GOTO 10
-
-                A = CBM_Console.GetIn();
-                if (A == 0)
+                if (go_state == 0 && A >= (byte)'0' && A <= (byte)'9')
                 {
-                    Z = true;
-                    C = false;
+                    go_state = 1;
+                    return ExecuteJSR(0xAD8A); // Evaluate expression, check data type
                 }
-                else
+                else if (go_state == 1)
                 {
-                    X = A;
-                    Z = false;
-                    C = false;
+                    go_state = 2;
+                    return ExecuteJSR(0xB7F7); // Convert fp to 2 byte integer
                 }
-
-                // RTS equivalent
-                byte lo = Pop();
-                byte hi = Pop();
-                PC = (ushort)(((hi << 8) | lo) + 1);
-
-                return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
-            }
-            else if (PC == 0xF6ED) // STOP
-            {
-                Z = CBM_Console.CheckStop();
-
-                // RTS equivalent
-                byte lo = Pop();
-                byte hi = Pop();
-                PC = (ushort)(((hi << 8) | lo) + 1);
-
-                return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
-            }
-            else if (PC == 0xFE00) // SETLFS
-            {
-                FileNum = A;
-                FileDev = X;
-                FileSec = Y;
-                System.Diagnostics.Debug.WriteLine(string.Format("SETLFS {0},{1},{2}", FileNum, FileDev, FileSec));
-            }
-            else if (PC == 0xFDF9) // SETNAM
-            {
-                StringBuilder name = new StringBuilder();
-                ushort addr = (ushort)(X + (Y << 8));
-                for (int i = 0; i < A; ++i)
-                    name.Append((char)memory[(ushort)(addr + i)]);
-                System.Diagnostics.Debug.WriteLine(string.Format("SETNAM {0}", name.ToString()));
-                FileName = name.ToString();
-            }
-            else if (PC == 0xF49E) // LOAD
-            {
-                FileAddr = (ushort)(X + (Y << 8));
-                string op;
-                if (A == 0)
-                    op = "LOAD";
-                else if (A == 1)
-                    op = "VERIFY";
-                else
-                    op = string.Format("LOAD (A={0}) ???", A);
-                FileVerify = (A == 1);
-                System.Diagnostics.Debug.WriteLine(string.Format("{0} @{1:X4}", op, FileAddr));
-
-                // RTS equivalent
-                byte lo = Pop();
-                byte hi = Pop();
-                PC = (ushort)(((hi << 8) | lo) + 1);
-
-                if (A == 0 || A == 1)
+                else if (go_state == 2)
                 {
-                    StartupPRG = FileName;
-                    FileName = null;
-                    LOAD_TRAP = PC;
-
-                    // Set success
-                    C = false;
+                    Program.go_num = (ushort)(Y + (A << 8));
+                    exit = true;
+                    return true;
                 }
-                else
-                {
-                    A = 14; // ILLEGAL QUANTITY message
-                    C = true; // failure
-                }
-
-                return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
             }
-            else if (PC == 0xF5DD) // SAVE
-            {
-                ushort addr1 = (ushort)(memory[A] + (memory[(ushort)(A + 1)] << 8));
-                ushort addr2 = (ushort)(X + (Y << 8));
-                System.Diagnostics.Debug.WriteLine(string.Format("SAVE {0:X4}-{1:X4}", addr1, addr2));
 
-                // RTS equivalent
-                byte lo = Pop();
-                byte hi = Pop();
-                PC = (ushort)(((hi << 8) | lo) + 1);
-
-                // Set success
-                C = !FileSave(FileName, addr1, addr2);
-
-                return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
-            }
-            return false; // execute normally
+            return base.ExecutePatch();
         }
 
         ConsoleColor ToConsoleColor(byte CommodoreColor)
@@ -490,91 +387,6 @@ namespace simple_emu_c64
             }
         }
 
-        static byte LO(ushort value)
-        {
-            return (byte)value;
-        }
-
-        static byte HI(ushort value)
-        {
-            return (byte)(value >> 8);
-        }
-
-        bool FileLoad(out byte err)
-        {
-            err = 0;
-            ushort addr = FileAddr;
-            bool success = true;
-            try
-            {
-                string filename = StartupPRG;
-                if (!File.Exists(filename) && !filename.ToLower().EndsWith(".prg"))
-                    filename += ".prg";
-                using (FileStream stream = File.OpenRead(filename))
-                {
-                    byte lo = (byte)stream.ReadByte();
-                    byte hi = (byte)stream.ReadByte();
-                    if (FileSec == 1) // use address in file? yes-use, no-ignore
-                        addr = (ushort)(lo | (hi << 8)); // use address specified in file
-                    int i;
-                    while (success)
-                    {
-                        i = stream.ReadByte();
-                        if (i >= 0 && i <= 255)
-                        {
-                            if (FileVerify)
-                            {
-                                if (memory[addr++] != (byte)i)
-                                {
-                                    err = 28; // VERIFY
-                                    success = false;
-                                }
-                            }
-                            else
-                                memory[addr++] = (byte)i;
-                        }
-                        else
-                            break; // end of file
-                    }
-                    stream.Close();
-                }
-            }
-            catch (FileNotFoundException)
-            {
-                err = 4; // FILE NOT FOUND
-                success = false;
-            }
-            catch (Exception)
-            {
-                err = 1; // UNKNOWN - TOO MANY FILES
-                success = false;
-            }
-            FileAddr = addr;
-            return success;
-        }
-
-        bool FileSave(string filename, ushort addr1, ushort addr2)
-        {
-            try
-            {
-                if (!filename.ToLower().EndsWith(".prg"))
-                    filename += ".prg";
-                using (FileStream stream = File.OpenWrite(filename))
-                {
-                    stream.WriteByte(LO(addr1));
-                    stream.WriteByte(HI(addr1));
-                    for (ushort addr = addr1; addr <= addr2; ++addr)
-                        stream.WriteByte(memory[addr]);
-                    stream.Close();
-                    return true;
-                }
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
         ///////////////////////////////////////////////////////////////////////
 
         class C64Memory : Emu6502.Memory
@@ -597,6 +409,8 @@ namespace simple_emu_c64
 
             public C64Memory(int ram_size, string basic_file, string chargen_file, string kernal_file)
             {
+                if (ram_size > 64 * 1024)
+                    ram_size = 64 * 1024;
                 ram = new byte[ram_size];
                 basic_rom = File.ReadAllBytes(basic_file);
                 char_rom = File.ReadAllBytes(chargen_file);
@@ -661,35 +475,13 @@ namespace simple_emu_c64
                         Console.BackgroundColor = ToConsoleColor(value);
 #endif
                         io[addr - io_addr] = (byte)(value & 0xF); // store value so can be retrieved
+                        ApplyColor(Reverse(this));
                     }
                     else if (addr >= color_addr && addr < color_addr + color_size)
                         io[addr - io_addr] = value;
                     //else if (addr >= io_addr && addr < io_addr + io.Length)
                     //    io[addr - io_addr] = value;
                 }
-            }
-
-            // returns true if BASIC
-            internal bool LoadStartupPrg(string filename, out ushort end_addr)
-            {
-                if (!File.Exists(filename) && !filename.ToLower().EndsWith(".prg"))
-                    filename += ".prg";
-                bool result;
-                byte[] prg = File.ReadAllBytes(filename);
-                ushort loadaddr;
-                if (prg[0] == 1)
-                {
-                    loadaddr = (ushort)(ram[43] | (ram[44] << 8));
-                    result = true;
-                }
-                else
-                {
-                    loadaddr = (ushort)(prg[0] | (prg[1] << 8));
-                    result = false;
-                }
-                Array.Copy(prg, 2, ram, loadaddr, prg.Length - 2);
-                end_addr = (ushort)(loadaddr + prg.Length - 2);
-                return result;
             }
         }
     }

@@ -65,6 +65,7 @@ namespace simple_emu_c64
 
         protected bool trace = false;
         protected bool step = false;
+        protected bool exit = false;
 
         public Emu6502(Memory memory)
         {
@@ -100,6 +101,8 @@ namespace simple_emu_c64
             {
                 while (true)
                 {
+                    if (exit)
+                        return;
                     bytes = 1;
                     bool breakpoint = false;
                     if (Breakpoints.Contains(PC))
@@ -111,7 +114,7 @@ namespace simple_emu_c64
                         string dis = Disassemble(PC, out conditional, out bytes, out addr2, out line);
                         string state = GetDisplayState();
                         System.Diagnostics.Debug.WriteLine(string.Format("{0}{1}", line.PadRight(30), state));
-                        //Console.WriteLine(string.Format("{0}{1}", line.PadRight(30), state));
+                        //Console.Error.WriteLine(string.Format("{0}{1}", line.PadRight(30), state));
                         if (step)
                             step = step; // user can put debug breakpoint here to allow stepping
                         if (breakpoint)
@@ -653,12 +656,12 @@ namespace simple_emu_c64
             bytes = 0; // addr already changed
         }
 
-        void RTS(ref ushort addr, out byte bytes)
+        public void RTS(ref ushort addr, out byte bytes)
         {
             byte lo = Pop();
             byte hi = Pop();
-            bytes = 1; // make sure caller increases addr by one
-            addr = (ushort)((hi << 8) | lo);
+            bytes = 0; // make sure caller does not increase addr because handled here
+            addr = (ushort)(((hi << 8) | lo) + 1);
         }
 
         void RTI(ref ushort addr, out byte bytes)
@@ -700,17 +703,17 @@ namespace simple_emu_c64
             addr = addr3;
         }
 
-        void SetA(int value)
+        public void SetA(int value)
         {
             SetReg(ref A, value);
         }
 
-        void SetX(int value)
+        public void SetX(int value)
         {
             SetReg(ref X, value);
         }
 
-        void SetY(int value)
+        public void SetY(int value)
         {
             SetReg(ref Y, value);
         }
@@ -852,12 +855,12 @@ namespace simple_emu_c64
             return addr2;
         }
 
-        byte LO(ushort value)
+        public byte LO(ushort value)
         {
             return (byte)value;
         }
 
-        byte HI(ushort value)
+        public byte HI(ushort value)
         {
             return (byte)(value >> 8);
         }

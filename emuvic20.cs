@@ -73,46 +73,42 @@ using System.IO;
 
 namespace simple_emu_c64
 {
-    public class EmuVIC20 : Emu6502
+    public class EmuVIC20 : EmuCBM
     {
         public EmuVIC20(int ram_size, string char_file, string basic_file, string kernal_file) 
             : base(new VIC20Memory(RamSizeToRamConfig(ram_size), char_file, basic_file, kernal_file))
         {
-#if CBM_COLOR
             CBM_Console.ApplyColor = ApplyColor;
-#endif
             trace = false;
         }
 
         private static byte RamSizeToRamConfig(int ram_size)
         {
-            if (ram_size == 4 * 1024)
-                return 0x00;
-            else if (ram_size == 7 * 1024)
-                return 0x01;
-            else if (ram_size == 12 * 1024)
-                return 0x02;
-            else if (ram_size == 15 * 1024)
-                return 0x03;
-            else if (ram_size == 20 * 1024)
-                return 0x06;
-            else if (ram_size == 23 * 1024)
-                return 0x07;
-            else if (ram_size == 28 * 1024)
-                return 0x0E;
-            else if (ram_size == 31 * 1024)
-                return 0x0F;
-            else if (ram_size == 36 * 1024)
-                return 0x1E;
-            else if (ram_size == 39 * 1024)
-                return 0x1F;
+            if (ram_size < 7 * 1024)
+                return 0x00; // 4K BASE
+            else if (ram_size < 12 * 1024)
+                return 0x01; // 7K = 3K EXP + 4K BASE
+            else if (ram_size < 15 * 1024)
+                return 0x02; // 12K = 4K BASE + 8K EXP
+            else if (ram_size < 20 * 1024)
+                return 0x03; // 15K = 3K EXP + 4K BASE + 8K EXP (3K NOT AVAILABLE TO BASIC)
+            else if (ram_size < 23 * 1024)
+                return 0x06; // 20K = 4K BASE + 16K EXP
+            else if (ram_size < 28 * 1024)
+                return 0x07; // 23K = 3K EXP + 4K BASE + 16K EXP (3K NOT AVAILABLE TO BASIC)
+            else if (ram_size < 31 * 1024)
+                return 0x0E; // 28K = 4K BASE + 24K EXP
+            else if (ram_size < 36 * 1024)
+                return 0x0F; // 31K = 3K EXP + 3K BASE + 24K EXP (3K NOT AVAILABLE TO BASIC)
+            else if (ram_size < 39 * 1024)
+                return 0x1E; // 36K = 3K EXP + 3K BASE + 32K EXP (11K NOT AVAILABLE TO BASIC)
             else
-                return 0;
+                return 0x1F; // 39K
         }
 
-        private void ApplyColor()
+        private static void ApplyColor(bool reverse)
         {
-            bool reverse = (memory[199] != 0) ^ ((memory[0x900F] & 0x8) == 0);
+#if CBM_COLOR
             if (reverse)
             {
                 Console.BackgroundColor = ToConsoleColor(memory[646]);
@@ -123,32 +119,140 @@ namespace simple_emu_c64
                 Console.ForegroundColor = ToConsoleColor(memory[646]);
                 Console.BackgroundColor = ToConsoleColor(memory[0x900F]);
             }
+#else
+            if (reverse)
+            {
+                Console.BackgroundColor = startup_fg;
+                Console.ForegroundColor = startup_bg;
+            }
+            else
+            {
+                Console.ForegroundColor = startup_fg;
+                Console.BackgroundColor = startup_bg;
+            }
+#endif
         }
+
+        private static bool Reverse(Emu6502.Memory memory)
+        {
+            return (memory[199] != 0) ^ ((memory[0x900F] & 0x8) == 0);
+        }
+
+        private void ApplyColor()
+        {
+            ApplyColor(Reverse(memory));
+        }
+
+        static int go_state = 0;
+        static int startup_state = 0;
 
         protected override bool ExecutePatch()
         {
-            if (base.PC == 0xFFD2) // CHROUT
+            if (PC == 0xC474 || PC == LOAD_TRAP) // READY
             {
-                CBM_Console.WriteChar((char)A);
-                // fall through to draw character in screen memory too
+                go_state = 0;
+
+                if (StartupPRG != null) // User requested program be loaded at startup
+                {
+                    bool is_basic;
+                    if (PC == LOAD_TRAP)
+                    {
+                        is_basic = (
+                            FileVerify == false
+                            && FileSec == 0 // relative load, not absolute
+                            && LO(FileAddr) == memory[43] // requested load address matches BASIC start
+                            && HI(FileAddr) == memory[44]);
+                        if (!FileLoad(out byte err))
+                        {
+                            System.Diagnostics.Debug.WriteLine(string.Format("FileLoad() failed: err={0}, file {1}", err, StartupPRG));
+                            C = true; // signal error
+                            SetA(err); // FILE NOT FOUND or VERIFY
+
+                            // so doesn't repeat
+                            StartupPRG = null;
+                            LOAD_TRAP = -1;
+
+                            return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
+                        }
+                    }
+                    else
+                    {
+                        FileName = StartupPRG;
+                        FileAddr = (ushort)(memory[43] | (memory[44] << 8));
+                        is_basic = LoadStartupPrg();
+                    }
+
+                    StartupPRG = null;
+
+                    if (is_basic)
+                    {
+                        // initialize first couple bytes (may only be necessary for UNNEW?)
+                        ushort addr = (ushort)(memory[43] | (memory[44] << 8));
+                        memory[addr] = 1;
+                        memory[(ushort)(addr + 1)] = 1;
+
+                        startup_state = 1; // should be able to regain control when returns...
+
+                        return ExecuteJSR(0xC533); // LINKPRG
+                    }
+                    else
+                    {
+                        LOAD_TRAP = -1;
+                        X = LO(FileAddr);
+                        Y = HI(FileAddr);
+                        C = false;
+                    }
+                }
+                else if (startup_state == 1)
+                {
+                    ushort addr = (ushort)(memory[0x22] | (memory[0x23] << 8) + 2);
+                    memory[45] = (byte)addr;
+                    memory[46] = (byte)(addr >> 8);
+
+                    SetA(0);
+
+                    startup_state = 2; // should be able to regain control when returns...
+
+                    return ExecuteJSR(0xC65E); // CLEAR/CLR
+                }
+                else if (startup_state == 2)
+                {
+                    if (PC == LOAD_TRAP)
+                    {
+                        X = LO(FileAddr);
+                        Y = HI(FileAddr);
+                    }
+                    else
+                    {
+                        CBM_Console.Push("RUN\r");
+                        PC = 0xA47B; // skip READY message, but still set direct mode, and continue to MAIN
+                    }
+                    C = false; // signal success
+                    startup_state = 0;
+                    LOAD_TRAP = -1;
+                    return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
+                }
             }
-            else if (base.PC == 0xFFCF) // CHRIN
+            else if (PC == 0xC815) // Execute after GO
             {
-                A = CBM_Console.ReadChar();
-
-                // SetA equivalent for flags
-                Z = (A == 0);
-                N = ((A & 0x80) != 0);
-                C = false;
-
-                // RTS equivalent
-                byte lo = base.Pop();
-                byte hi = base.Pop();
-                base.PC = (ushort)(((hi << 8) | lo) + 1);
-
-                return true; // overriden, so don't execute
+                if (go_state == 0 && A >= (byte)'0' && A <= (byte)'9')
+                {
+                    go_state = 1;
+                    return ExecuteJSR(0xCD8A); // Evaluate expression, check data type
+                }
+                else if (go_state == 1)
+                {
+                    go_state = 2;
+                    return ExecuteJSR(0xD7F7); // Convert fp to 2 byte integer
+                }
+                else if (go_state == 2)
+                {
+                    Program.go_num = (ushort)(Y + (A << 8));
+                    exit = true;
+                    return true;
+                }
             }
-            return false; // execute normally
+            return base.ExecutePatch();
         }
 
         static ConsoleColor ToConsoleColor(byte CommodoreColor)
@@ -185,7 +289,7 @@ namespace simple_emu_c64
             // ram_8k2;        // 8K: 4000-5FFF (bank2, Optional)
             // ram_8k3;        // 8K: 6000-7FFF (bank3, Optional)
             byte[] char_rom;   // 4K: 8000-8FFF
-            //byte[] io;         // 4K: 9000-9FFF (including video ram)
+            byte[] io;         // 4K: 9000-9FFF (including video ram)
             // ram_rom         // 8K: A000-BFFF (bank4, Optional, Cartridge)
             byte[] basic_rom;  // 8K: C000-DFFF
             byte[] kernal_rom; // 8K: E000-FFFF
@@ -223,9 +327,9 @@ namespace simple_emu_c64
                 for (int i = 0; i < ram_size; ++i)
                     ram[i] = 0;
 
-                //io = new byte[io_size];
-                //for (int i = 0; i < io_size; ++i)
-                //    io[i] = 0;
+                io = new byte[io_size];
+                for (int i = 0; i < io_size; ++i)
+                    io[i] = 0;
 
                 char_rom = File.ReadAllBytes(char_file);
                 basic_rom = File.ReadAllBytes(basic_file);
@@ -251,7 +355,7 @@ namespace simple_emu_c64
                     else if (addr >= char_addr && addr < char_addr + char_rom.Length)
                         return char_rom[addr - char_addr];
                     else if (addr >= io_addr && addr < io_addr + io_size)
-                        return 0; // io[addr - io_addr];
+                        return io[addr - io_addr];
                     else if (addr >= cart_addr && addr < basic_addr && ((ram_banks & 0x10) != 0))
                         return ram[addr];
                     else if (addr >= basic_addr && addr < basic_addr + basic_rom.Length)
@@ -278,18 +382,9 @@ namespace simple_emu_c64
                         ram[addr] = value;
                     else if (addr >= io_addr && addr < io_addr + io_size)
                     {
-                        //io[addr - io_addr] = value;
+                        io[addr - io_addr] = value;
                         if (addr == 0x900F) // background/border/inverse
-                        {
-#if CBM_COLOR
-                            bool reverse = (ram[199] != 0);
-
-                            if (reverse)
-                                Console.ForegroundColor = EmuVIC20.ToConsoleColor(value);
-                            else
-                                Console.BackgroundColor = EmuVIC20.ToConsoleColor(value);
-#endif
-                        }
+                            ApplyColor(Reverse(this));
                     }
                     else if (addr >= cart_addr && addr < basic_addr && ((ram_banks & 0x10) != 0))
                         ram[addr] = value;
