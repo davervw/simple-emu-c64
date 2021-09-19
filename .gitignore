@@ -1,4 +1,9 @@
-.vs
-bin
-obj
+.vs/
+.vscode/
+bin/
+obj/
 simple-emu-c64.csproj.user
+c64/
+vic20/
+ted/
+pet/

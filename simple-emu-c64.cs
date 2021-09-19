@@ -66,35 +66,35 @@ namespace simple_emu_c64
                 {
                     if (ram_size == 0)
                         ram_size = 64 * 1024;
-                    if (File.Exists("basic") && File.Exists("kernal") && (!File.Exists("c64\\basic") || !File.Exists("c64\\kernal")))
-                        cbm = new EmuC64(ram_size: ram_size, basic_file: "basic", chargen_file: "c64\\chargen", kernal_file: "kernal");
+                    if (File.Exists("basic") && File.Exists("kernal") && (!File.Exists($"c64{Path.DirectorySeparatorChar}basic") || !File.Exists($"c64{Path.DirectorySeparatorChar}kernal")))
+                        cbm = new EmuC64(ram_size: ram_size, basic_file: "basic", chargen_file: $"c64{Path.DirectorySeparatorChar}chargen", kernal_file: "kernal");
                     else
-                        cbm = new EmuC64(ram_size: ram_size, basic_file: "c64\\basic", chargen_file: "c64\\chargen", kernal_file: "c64\\kernal");
+                        cbm = new EmuC64(ram_size: ram_size, basic_file: $"c64{Path.DirectorySeparatorChar}basic", chargen_file: $"c64{Path.DirectorySeparatorChar}chargen", kernal_file: $"c64{Path.DirectorySeparatorChar}kernal");
 
                     if ((args.Length == 2 || args.Length == 4) && (File.Exists(args[args.Length-1]) || File.Exists(args[args.Length - 1]+".prg")))
                         ((EmuC64)cbm).StartupPRG = args[args.Length - 1];
                 }
-                else if (args.Length > 0 && args[0].ToLower() == "vic20")
+                else if (args.Length > 0 && args[0].ToLower() == $"vic20")
                 {
-                    cbm = new EmuVIC20(ram_size: ram_size, char_file: "vic20\\chargen", basic_file: "vic20\\basic", kernal_file: "vic20\\kernal");
+                    cbm = new EmuVIC20(ram_size: ram_size, char_file: $"vic20{Path.DirectorySeparatorChar}chargen", basic_file: $"vic20{Path.DirectorySeparatorChar}basic", kernal_file: $"vic20{Path.DirectorySeparatorChar}kernal");
                 }
                 else if (args.Length > 0 && args[0].ToLower() == "c16")
                 {
                     if (ram_size == 0)
                         ram_size = 16 * 1024;
-                    cbm = new EmuTED(ram_size: ram_size, basic_file: "ted\\basic", kernal_file: "ted\\kernal");
+                    cbm = new EmuTED(ram_size: ram_size, basic_file: $"ted{Path.DirectorySeparatorChar}basic", kernal_file: $"ted{Path.DirectorySeparatorChar}kernal");
                 }
                 else if (args.Length > 0 && args[0].ToLower() == "plus4" || args[0].ToLower() == "ted")
                 {
                     if (ram_size == 0)
                         ram_size = 64 * 1024;
-                    cbm = new EmuTED(ram_size: ram_size, basic_file: "ted\\basic", kernal_file: "ted\\kernal");
+                    cbm = new EmuTED(ram_size: ram_size, basic_file: $"ted{Path.DirectorySeparatorChar}basic", kernal_file: $"ted{Path.DirectorySeparatorChar}kernal");
                 }
                 else if (args.Length > 0 && args[0].ToLower() == "pet")
                 {
                     if (ram_size == 0)
                         ram_size = 8 * 1024;
-                    cbm = new EmuPET(ram_size: ram_size, basic_file: "pet\\basic1", edit_file: "pet\\edit1g", kernal_file: "pet\\kernal1");
+                    cbm = new EmuPET(ram_size: ram_size, basic_file: $"pet{Path.DirectorySeparatorChar}basic1", edit_file: $"pet{Path.DirectorySeparatorChar}edit1g", kernal_file: $"pet{Path.DirectorySeparatorChar}kernal1");
                 }
                 else
                 {
@@ -163,19 +163,19 @@ namespace simple_emu_c64
                             try
                             {
                                 if (go_num == 2001)
-                                    cbm = new EmuPET(ram_size: ram_size, basic_file: "pet\\basic1", edit_file: "pet\\edit1g", kernal_file: "pet\\kernal1");
+                                    cbm = new EmuPET(ram_size: ram_size, basic_file: $"pet{Path.DirectorySeparatorChar}basic1", edit_file: $"pet{Path.DirectorySeparatorChar}edit1g", kernal_file: $"pet{Path.DirectorySeparatorChar}kernal1");
                                 else if (go_num == 20)
-                                    cbm = new EmuVIC20(ram_size: ram_size, char_file: "vic20\\chargen", basic_file: "vic20\\basic", kernal_file: "vic20\\kernal");
+                                    cbm = new EmuVIC20(ram_size: ram_size, char_file: $"vic20{Path.DirectorySeparatorChar}chargen", basic_file: $"vic20{Path.DirectorySeparatorChar}basic", kernal_file: $"vic20{Path.DirectorySeparatorChar}kernal");
                                 else if (go_num == 64)
                                 {
-                                    if (File.Exists("basic") && File.Exists("kernal") && (!File.Exists("c64\\basic") || !File.Exists("c64\\kernal")))
-                                        cbm = new EmuC64(ram_size: ram_size, basic_file: "basic", chargen_file: "c64\\chargen", kernal_file: "kernal");
+                                    if (File.Exists("basic") && File.Exists("kernal") && (!File.Exists($"c64{Path.DirectorySeparatorChar}basic") || !File.Exists($"c64{Path.DirectorySeparatorChar}kernal")))
+                                        cbm = new EmuC64(ram_size: ram_size, basic_file: "basic", chargen_file: $"c64{Path.DirectorySeparatorChar}chargen", kernal_file: "kernal");
                                     else
-                                        cbm = new EmuC64(ram_size: ram_size, basic_file: "c64\\basic", chargen_file: "c64\\chargen", kernal_file: "c64\\kernal");
+                                        cbm = new EmuC64(ram_size: ram_size, basic_file: $"c64{Path.DirectorySeparatorChar}basic", chargen_file: $"c64{Path.DirectorySeparatorChar}chargen", kernal_file: $"c64{Path.DirectorySeparatorChar}kernal");
                                 }
                                 else if (go_num == 16 || go_num == 4)
                                 {
-                                    cbm = new EmuTED(ram_size: ram_size, basic_file: "ted\\basic", kernal_file: "ted\\kernal");
+                                    cbm = new EmuTED(ram_size: ram_size, basic_file: $"ted{Path.DirectorySeparatorChar}basic", kernal_file: $"ted{Path.DirectorySeparatorChar}kernal");
                                 }
                             }
                             catch (Exception ex)
