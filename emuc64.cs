@@ -137,14 +137,8 @@ namespace simple_emu_c64
         //   $B7F7 = Convert floating point to 2 byte integer Y/A
         protected override bool ExecutePatch()
         {
-            if (PC == 0xa7e4 && !trace) // execute statement
+            if (PC == 0xA474 || PC == LOAD_TRAP) // READY
             {
-                trace = true;
-                return true; // call again, so traces this line
-            }
-            else if (PC == 0xA474 || PC == LOAD_TRAP) // READY
-            {
-                trace = false;
                 go_state = 0;
 
                 if (StartupPRG != null) // User requested program be loaded at startup
