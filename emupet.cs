@@ -90,7 +90,7 @@ namespace simple_emu_c64
             {
                 //go_state = 0;
 
-                if (StartupPRG != null) // User requested program be loaded at startup
+                if (LOAD_TRAP != -1) // User requested program be loaded
                 {
                     bool is_basic;
                     if (PC == LOAD_TRAP)
@@ -99,10 +99,11 @@ namespace simple_emu_c64
                             FileVerify == false
                             && FileSec == 0 // relative load, not absolute
                         );
-                        bool success = FileLoad(out byte err);
+                        ushort end = 0;
+                        bool success = FileLoad(out byte err, ref end);
                         if (!success)
                         {
-                            System.Diagnostics.Debug.WriteLine(string.Format("FileLoad() failed: err={0}, file {1}", err, StartupPRG));
+                            System.Diagnostics.Debug.WriteLine(string.Format("FileLoad() failed: err={0}, file {1}", err, StartupPRG ?? FileName));
                             C = true; // signal error
                             SetA(err); // FILE NOT FOUND or VERIFY
 
@@ -117,7 +118,8 @@ namespace simple_emu_c64
                     {
                         FileName = StartupPRG;
                         FileAddr = (ushort)(memory[0x7A] | (memory[0x7B] << 8));
-                        is_basic = LoadStartupPrg();
+                        ushort end = 0;
+                        is_basic = LoadStartupPrg(ref end);
                     }
 
                     StartupPRG = null;

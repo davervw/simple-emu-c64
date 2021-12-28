@@ -137,11 +137,31 @@ namespace simple_emu_c64
         //   $B7F7 = Convert floating point to 2 byte integer Y/A
         protected override bool ExecutePatch()
         {
-            if (PC == 0xA474 || PC == LOAD_TRAP) // READY
+            if (memory[PC] == 0x6C && memory[(ushort)(PC + 1)] == 0x30 && memory[(ushort)(PC + 2)] == 0x03) // catch JMP(LOAD_VECTOR), redirect to jump table
+            {
+                CheckBypassSETLFS();
+                CheckBypassSETNAM();
+                // note: A register has same purpose LOAD/VERIFY
+                X = memory[0xC3];
+                Y = memory[0xC4];
+                PC = 0xFFD5; // use KERNAL JUMP TABLE instead, so LOAD is hooked by base
+                return true; // re-execute
+            }
+            if (memory[PC] == 0x6C && memory[(ushort)(PC + 1)] == 0x32 && memory[(ushort)(PC + 2)] == 0x03) // catch JMP(SAVE_VECTOR), redirect to jump table
+            {
+                CheckBypassSETLFS();
+                CheckBypassSETNAM();
+                X = memory[0xAE];
+                Y = memory[0xAF];
+                A = 0xC1;
+                PC = 0xFFD8; // use KERNAL JUMP TABLE instead, so SAVE is hooked by base
+                return true; // re-execute
+            }
+            else if (PC == 0xA474 || PC == LOAD_TRAP) // READY
             {
                 go_state = 0;
 
-                if (StartupPRG != null) // User requested program be loaded at startup
+                if (startup_state == 0 && (StartupPRG != null || PC == LOAD_TRAP))
                 {
                     bool is_basic;
                     if (PC == LOAD_TRAP)
@@ -151,7 +171,14 @@ namespace simple_emu_c64
                             && FileSec == 0 // relative load, not absolute
                             && LO(FileAddr) == memory[43] // requested load address matches BASIC start
                             && HI(FileAddr) == memory[44]);
-                        if (!FileLoad(out byte err))
+                        ushort end = 0;
+                        if (FileLoad(out byte err, ref end))
+                        {
+                            // set End of Program
+                            memory[0xAE] = (byte)end;
+                            memory[0xAF] = (byte)(end >> 8);
+                        }
+                        else
                         {
                             System.Diagnostics.Debug.WriteLine(string.Format("FileLoad() failed: err={0}, file {1}", err, StartupPRG));
                             C = true; // signal error
@@ -168,7 +195,11 @@ namespace simple_emu_c64
                     {
                         FileName = StartupPRG;
                         FileAddr = (ushort)(memory[43] | (memory[44] << 8));
-                        is_basic = LoadStartupPrg();
+                        ushort end = 0;
+                        is_basic = LoadStartupPrg(ref end);
+                        // set End of Program
+                        memory[0xAE] = (byte)end;
+                        memory[0xAF] = (byte)(end >> 8);
                     }
 
                     StartupPRG = null;
@@ -262,6 +293,37 @@ namespace simple_emu_c64
             }
 
             return base.ExecutePatch();
+        }
+
+        private void CheckBypassSETNAM()
+        {
+            // In case caller bypassed calling SETNAM, get from lower memory
+            byte name_len = memory[0xB7];
+            ushort name_addr = (ushort)(memory[0xBB] | (memory[0xBC] << 8));
+            StringBuilder name = new StringBuilder();
+            for (byte i = 0; i < name_len; ++i)
+                name.Append((char)memory[(ushort)(name_addr + i)]);
+            if (FileName != name.ToString())
+            {
+                System.Diagnostics.Debug.WriteLine(string.Format("bypassed SETNAM {0}", name.ToString()));
+                FileName = name.ToString();
+            }
+        }
+
+        private void CheckBypassSETLFS()
+        {
+            // In case caller bypassed calling SETLFS, get from lower memory
+            if (
+                FileNum != memory[0xB8]
+                || FileDev != memory[0xBA]
+                || FileSec != memory[0xB9]
+            )
+            {
+                FileNum = memory[0xB8];
+                FileDev = memory[0xBA];
+                FileSec = memory[0xB9];
+                System.Diagnostics.Debug.WriteLine(string.Format("bypassed SETLFS {0},{1},{2}", FileNum, FileDev, FileSec));
+            }
         }
 
         ConsoleColor ToConsoleColor(byte CommodoreColor)

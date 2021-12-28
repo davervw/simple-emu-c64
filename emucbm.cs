@@ -92,14 +92,11 @@ namespace simple_emu_c64
                 else
                     op = string.Format("LOAD (A={0}) ???", A);
                 FileVerify = (A == 1);
-                System.Diagnostics.Debug.WriteLine(string.Format("{0} @{1:X4}", op, FileAddr));
 
                 ExecuteRTS();
 
                 if (A == 0 || A == 1)
                 {
-                    StartupPRG = FileName;
-                    FileName = null;
                     LOAD_TRAP = PC;
 
                     // Set success
@@ -144,14 +141,14 @@ namespace simple_emu_c64
         }
 
         // returns true if BASIC
-        protected bool LoadStartupPrg()
+        protected bool LoadStartupPrg(ref ushort end)
         {
-            bool result = FileLoad(out byte unused_err);
+            bool result = FileLoad(out byte unused_err, ref end);
             return FileSec == 0 ? true : false; // relative is BASIC, absolute is ML
         }
 
         // returns success
-        protected bool FileLoad(out byte err)
+        protected bool FileLoad(out byte err, ref ushort end)
         {
             bool startup = (StartupPRG != null);
             err = 0;
@@ -159,7 +156,7 @@ namespace simple_emu_c64
             bool success = true;
             try
             {
-                string filename = StartupPRG;
+                string filename = startup ? StartupPRG : FileName;
                 if (!File.Exists(filename) && !filename.ToLower().EndsWith(".prg"))
                     filename += ".prg";
                 using (FileStream stream = File.OpenRead(filename))
@@ -175,6 +172,8 @@ namespace simple_emu_c64
                     }
                     if (FileSec == 1) // use address in file? yes-use, no-ignore
                         addr = (ushort)(lo | (hi << 8)); // use address specified in file
+                    var op = FileVerify ? "VERIFY" : "LOAD";
+                    System.Diagnostics.Debug.WriteLine($"{op}@{addr:X4}");
                     int i;
                     while (success)
                     {
@@ -197,6 +196,8 @@ namespace simple_emu_c64
                     }
                     stream.Close();
                 }
+                end = addr;
+                System.Diagnostics.Debug.WriteLine($"END {end:X4}");
             }
             catch (FileNotFoundException)
             {
