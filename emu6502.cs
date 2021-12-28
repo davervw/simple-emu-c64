@@ -294,7 +294,7 @@ namespace simple_emu_c64
                     case 0xFE: SetABSX(INC(GetABSX(PC, out bytes)), PC, out bytes); break;
 
                     default:
-                        throw new Exception(string.Format("Invalid opcode {0:X2} at {0:X4}", memory[PC], PC));
+                        throw new Exception(string.Format("Invalid opcode {0:X2} at {1:X4}", memory[PC], PC));
                 }
 
                 PC += bytes;
@@ -675,11 +675,11 @@ namespace simple_emu_c64
 
         void BRK(out byte bytes)
         {
-            ++PC;
+            PC += 2;
             Push(HI(PC));
             Push(LO(PC));
-            PHP();
             B = true;
+            PHP();
             PC = (ushort)(memory[0xFFFE] + (memory[0xFFFF] << 8)); // JMP(IRQ)
             bytes = 0;
         }
