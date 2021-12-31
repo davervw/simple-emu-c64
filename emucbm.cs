@@ -141,14 +141,14 @@ namespace simple_emu_c64
         }
 
         // returns true if BASIC
-        protected bool LoadStartupPrg(ref ushort end)
+        protected bool LoadStartupPrg()
         {
-            bool result = FileLoad(out byte unused_err, ref end);
+            bool result = FileLoad(out byte unused_err);
             return FileSec == 0 ? true : false; // relative is BASIC, absolute is ML
         }
 
         // returns success
-        protected bool FileLoad(out byte err, ref ushort end)
+        protected bool FileLoad(out byte err)
         {
             bool startup = (StartupPRG != null);
             err = 0;
@@ -196,8 +196,7 @@ namespace simple_emu_c64
                     }
                     stream.Close();
                 }
-                end = addr;
-                System.Diagnostics.Debug.WriteLine($"END {end:X4}");
+                System.Diagnostics.Debug.WriteLine($"END {addr:X4}");
             }
             catch (FileNotFoundException)
             {

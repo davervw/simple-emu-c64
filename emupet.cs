@@ -99,8 +99,7 @@ namespace simple_emu_c64
                             FileVerify == false
                             && FileSec == 0 // relative load, not absolute
                         );
-                        ushort end = 0;
-                        bool success = FileLoad(out byte err, ref end);
+                        bool success = FileLoad(out byte err);
                         if (!success)
                         {
                             System.Diagnostics.Debug.WriteLine(string.Format("FileLoad() failed: err={0}, file {1}", err, StartupPRG ?? FileName));
@@ -118,8 +117,7 @@ namespace simple_emu_c64
                     {
                         FileName = StartupPRG;
                         FileAddr = (ushort)(memory[0x7A] | (memory[0x7B] << 8));
-                        ushort end = 0;
-                        is_basic = LoadStartupPrg(ref end);
+                        is_basic = LoadStartupPrg();
                     }
 
                     StartupPRG = null;

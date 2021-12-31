@@ -121,8 +121,7 @@ namespace simple_emu_c64
                             && LO(FileAddr) == memory[43] // requested load address matches BASIC start
                             && HI(FileAddr) == memory[44]);
                         memory[0xFF3F] = 0; // switch to RAM
-                        ushort end = 0;
-                        bool success = FileLoad(out byte err, ref end);
+                        bool success = FileLoad(out byte err);
                         memory[0xFF3E] = 0; // switch to ROM
                         if (!success)
                         {
@@ -142,8 +141,7 @@ namespace simple_emu_c64
                         FileName = StartupPRG;
                         FileAddr = (ushort)(memory[43] | (memory[44] << 8));
                         memory[0xFF3F] = 0; // switch to RAM
-                        ushort end = 0;
-                        is_basic = LoadStartupPrg(ref end);
+                        is_basic = LoadStartupPrg();
                         memory[0xFF3E] = 0; // switch to ROM
                     }
 

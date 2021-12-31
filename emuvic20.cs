@@ -162,8 +162,7 @@ namespace simple_emu_c64
                             && FileSec == 0 // relative load, not absolute
                             && LO(FileAddr) == memory[43] // requested load address matches BASIC start
                             && HI(FileAddr) == memory[44]);
-                        ushort end = 0;
-                        if (!FileLoad(out byte err, ref end))
+                        if (!FileLoad(out byte err))
                         {
                             System.Diagnostics.Debug.WriteLine(string.Format("FileLoad() failed: err={0}, file {1}", err, StartupPRG));
                             C = true; // signal error
@@ -179,9 +178,7 @@ namespace simple_emu_c64
                     else
                     {
                         FileName = StartupPRG;
-                        FileAddr = (ushort)(memory[43] | (memory[44] << 8));
-                        ushort end = 0;
-                        is_basic = LoadStartupPrg(ref end);
+                        is_basic = LoadStartupPrg();
                     }
 
                     StartupPRG = null;
