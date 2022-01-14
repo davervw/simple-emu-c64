@@ -7,7 +7,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2020 by David R. Van Wagner
+// Copyright (c) 2022 by David R. Van Wagner
 // davevw.com
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -74,31 +74,8 @@ namespace simple_emu_c64
     {
         public EmuTED(int ram_size, string basic_file, string kernal_file) : base(new TEDMemory(ram_size, basic_file, kernal_file))
         {
-            CBM_Console.ApplyColor = ApplyColor;
-        }
-
-        private static void ApplyColor(bool reverse)
-        {
-            if (reverse)
-            {
-                Console.BackgroundColor = startup_fg;
-                Console.ForegroundColor = startup_bg;
-            }
-            else
-            {
-                Console.ForegroundColor = startup_fg;
-                Console.BackgroundColor = startup_bg;
-            }
-        }
-
-        private static bool Reverse(Emu6502.Memory memory)
-        {
-            return (memory[194] != 0);
-        }
-
-        private void ApplyColor()
-        {
-            ApplyColor(Reverse(memory));
+            Console.BackgroundColor = startup_bg;
+            Console.ForegroundColor = startup_fg;
         }
 
         private int startup_state = 0;
@@ -312,7 +289,26 @@ namespace simple_emu_c64
                     else if (addr >= io_addr && addr < io_addr + io.Length)
                         io[addr - io_addr] = value;
                     else
+                    { 
                         ram[addr & (ram.Length - 1)] = value; // includes writing under rom, note RAM wraps around when less than 64K
+                        if (addr == 194)
+                            ApplyColor();
+                    }
+                }
+            }
+
+            private void ApplyColor()
+            {
+                bool reverse = (this[194] != 0);
+                if (reverse)
+                {
+                    Console.BackgroundColor = startup_fg;
+                    Console.ForegroundColor = startup_bg;
+                }
+                else
+                {
+                    Console.ForegroundColor = startup_fg;
+                    Console.BackgroundColor = startup_bg;
                 }
             }
         }

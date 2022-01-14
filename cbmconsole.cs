@@ -42,9 +42,6 @@ namespace simple_emu_c64
         static bool supress_next_cr = false;
         static List<char> buffer = new List<char>();
 
-        public static ApplyColorDelegate ApplyColor = null; // optionally apply color when displaying characters
-        public delegate void ApplyColorDelegate();
-
         public static void WriteChar(char c, bool supress_next_home=false)
         {
             // we're emulating, so draw character on local console window
@@ -57,7 +54,6 @@ namespace simple_emu_c64
             }
             else if (c >= ' ' && c <= '~')
             {
-                ApplyColor?.Invoke();
                 Console.Write(c);
             }
             else if (c == 157) // left
@@ -129,7 +125,6 @@ namespace simple_emu_c64
             if (buffer.Count == 0)
             {
                 // System.Console.ReadLine() has features of history (cursor up/down, F7/F8), editing (cursor left/right, delete, backspace, etc.)
-                ApplyColor?.Invoke();
                 buffer.AddRange(Console.ReadLine());
                 buffer.Add('\r');
                 //Console.SetCursorPosition(Console.CursorLeft, Console.CursorTop - 1); // Up one line

@@ -64,8 +64,7 @@
 
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //uncomment for Commodore foreground, background colors and reverse emulation
-//#define CBM_COLOR
-//NOTE: Using C64 color mapping, not adjusted for VIC-20 differences yet
+#define CBM_COLOR
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 using System;
@@ -78,7 +77,6 @@ namespace simple_emu_c64
         public EmuVIC20(int ram_size, string char_file, string basic_file, string kernal_file) 
             : base(new VIC20Memory(RamSizeToRamConfig(ram_size), char_file, basic_file, kernal_file))
         {
-            CBM_Console.ApplyColor = ApplyColor;
             trace = false;
         }
 
@@ -104,43 +102,6 @@ namespace simple_emu_c64
                 return 0x1E; // 36K = 3K EXP + 3K BASE + 32K EXP (11K NOT AVAILABLE TO BASIC)
             else
                 return 0x1F; // 39K
-        }
-
-        private static void ApplyColor(bool reverse)
-        {
-#if CBM_COLOR
-            if (reverse)
-            {
-                Console.BackgroundColor = ToConsoleColor(memory[646]);
-                Console.ForegroundColor = ToConsoleColor(memory[0x900F]);
-            }
-            else
-            {
-                Console.ForegroundColor = ToConsoleColor(memory[646]);
-                Console.BackgroundColor = ToConsoleColor(memory[0x900F]);
-            }
-#else
-            if (reverse)
-            {
-                Console.BackgroundColor = startup_fg;
-                Console.ForegroundColor = startup_bg;
-            }
-            else
-            {
-                Console.ForegroundColor = startup_fg;
-                Console.BackgroundColor = startup_bg;
-            }
-#endif
-        }
-
-        private static bool Reverse(Emu6502.Memory memory)
-        {
-            return (memory[199] != 0) ^ ((memory[0x900F] & 0x8) == 0);
-        }
-
-        private void ApplyColor()
-        {
-            ApplyColor(Reverse(memory));
         }
 
         static int go_state = 0;
@@ -254,26 +215,26 @@ namespace simple_emu_c64
             return base.ExecutePatch();
         }
 
-        static ConsoleColor ToConsoleColor(byte CommodoreColor)
+        static ConsoleColor ToConsoleColor(int CommodoreColor)
         {
             switch (CommodoreColor & 0xF)
             {
                 case 0: return ConsoleColor.Black;
                 case 1: return ConsoleColor.White;
-                case 2: return ConsoleColor.Red;
-                case 3: return ConsoleColor.Cyan;
-                case 4: return ConsoleColor.DarkMagenta;
+                case 2: return ConsoleColor.DarkRed;
+                case 3: return ConsoleColor.DarkCyan;
+                case 4: return ConsoleColor.DarkMagenta; // Purple
                 case 5: return ConsoleColor.DarkGreen;
                 case 6: return ConsoleColor.DarkBlue;
-                case 7: return ConsoleColor.Yellow;
-                case 8: return ConsoleColor.DarkYellow;
-                case 9: return ConsoleColor.DarkRed;
-                case 10: return ConsoleColor.Magenta;
-                case 11: return ConsoleColor.DarkCyan;
-                case 12: return ConsoleColor.DarkGray;
-                case 13: return ConsoleColor.Green;
-                case 14: return ConsoleColor.Blue;
-                case 15: return ConsoleColor.Gray;
+                case 7: return ConsoleColor.DarkYellow;
+                case 8: return ConsoleColor.DarkGray; // Orange
+                case 9: return ConsoleColor.Gray; // Light Orange
+                case 10: return ConsoleColor.Red; // Pink
+                case 11: return ConsoleColor.Cyan; // Light cyan
+                case 12: return ConsoleColor.Magenta; // Light purple
+                case 13: return ConsoleColor.Green; // Light green
+                case 14: return ConsoleColor.Blue; // Light blue
+                case 15: return ConsoleColor.Yellow; // Light yellow
                 default: throw new InvalidOperationException("Missing case number in ToConsoleColor");
             }
         }
@@ -368,7 +329,11 @@ namespace simple_emu_c64
                 set
                 {
                     if (addr < ram3k_addr)
+                    { 
                         ram[addr] = value;
+                        if (addr == 199 || addr == 646)
+                            ApplyColor();
+                    }
                     else if (addr >= ram3k_addr && addr < ram4k_addr && ((ram_banks & 0x01) != 0))
                         ram[addr] = value;
                     else if (addr >= ram4k_addr && addr < ram8k1_addr)
@@ -383,11 +348,39 @@ namespace simple_emu_c64
                     {
                         io[addr - io_addr] = value;
                         if (addr == 0x900F) // background/border/inverse
-                            ApplyColor(Reverse(this));
+                            ApplyColor();
                     }
                     else if (addr >= cart_addr && addr < basic_addr && ((ram_banks & 0x10) != 0))
                         ram[addr] = value;
                 }
+            }
+
+            private void ApplyColor()
+            {
+                bool reverse =  (this[199] != 0) ^ ((this[0x900F] & 0x8) == 1);
+#if CBM_COLOR
+                if (reverse)
+                {
+                    Console.ForegroundColor = ToConsoleColor(this[0x900F] >> 4);
+                    Console.BackgroundColor = ToConsoleColor(this[646]);
+                }
+                else
+                {
+                    Console.ForegroundColor = ToConsoleColor(this[646]);
+                    Console.BackgroundColor = ToConsoleColor(this[0x900F] >> 4);
+                }
+#else
+                if (reverse)
+                {
+                    Console.BackgroundColor = startup_fg;
+                    Console.ForegroundColor = startup_bg;
+                }
+                else
+                {
+                    Console.ForegroundColor = startup_fg;
+                    Console.BackgroundColor = startup_bg;
+                }
+#endif
             }
         }
     }

@@ -19,6 +19,7 @@ namespace simple_emu_c64
         protected ushort FileAddr = 0;
 
         protected int LOAD_TRAP = -1;
+        protected int CHAROUT_TRAP = -1;
 
         public EmuCBM(Emu6502.Memory memory):base(memory)
         {
@@ -34,8 +35,14 @@ namespace simple_emu_c64
         {
             if (PC == 0xFFD2) // CHROUT
             {
+                CHAROUT_TRAP = (ushort)((memory[(ushort)(0x100 + (byte)(S + 1))] | memory[(ushort)(0x100 + (byte)(S + 2))] << 8) + 1);
+                // fall through to draw character in screen memory, display when returns, for improved color/reverse handling
+            }
+            else if (PC == CHAROUT_TRAP)
+            {
                 CBM_Console.WriteChar((char)A);
-                // fall through to draw character in screen memory too
+                CHAROUT_TRAP = -1;
+                return true; // trap again
             }
             else if (PC == 0xFFCF) // CHRIN
             {

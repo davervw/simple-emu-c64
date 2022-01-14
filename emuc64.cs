@@ -69,6 +69,7 @@
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //uncomment for Commodore foreground, background colors and reverse emulation
 //#define CBM_COLOR
+//Warning: Default light blue on blue doesn't look good with default color palette for Windows console
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 using System;
@@ -81,44 +82,6 @@ namespace simple_emu_c64
     {
         public EmuC64(int ram_size, string basic_file, string chargen_file, string kernal_file) : base(new C64Memory(ram_size, basic_file, chargen_file, kernal_file))
         {
-            CBM_Console.ApplyColor = ApplyColor;
-        }
-
-        private static void ApplyColor(bool reverse)
-        {
-#if CBM_COLOR
-            if (reverse)
-            {
-                Console.BackgroundColor = ToConsoleColor(memory[646]);
-                Console.ForegroundColor = ToConsoleColor(memory[0xD021]);
-            }
-            else
-            {
-                Console.ForegroundColor = ToConsoleColor(memory[646]);
-                Console.BackgroundColor = ToConsoleColor(memory[0xD021]);
-            }
-#else
-            if (reverse)
-            {
-                Console.BackgroundColor = startup_fg;
-                Console.ForegroundColor = startup_bg;
-            }
-            else
-            {
-                Console.ForegroundColor = startup_fg;
-                Console.BackgroundColor = startup_bg;
-            }
-#endif
-        }
-
-        private static bool Reverse(Emu6502.Memory memory)
-        {
-            return (memory[199] != 0);
-        }
-
-        private void ApplyColor()
-        {
-            ApplyColor(Reverse(memory));
         }
 
         private int startup_state = 0;
@@ -324,30 +287,6 @@ namespace simple_emu_c64
             }
         }
 
-        ConsoleColor ToConsoleColor(byte CommodoreColor)
-        {
-            switch (CommodoreColor & 0xF)
-            {
-                case 0: return ConsoleColor.Black;
-                case 1: return ConsoleColor.White;
-                case 2: return ConsoleColor.Red;
-                case 3: return ConsoleColor.Cyan;
-                case 4: return ConsoleColor.DarkMagenta;
-                case 5: return ConsoleColor.DarkGreen;
-                case 6: return ConsoleColor.DarkBlue;
-                case 7: return ConsoleColor.Yellow;
-                case 8: return ConsoleColor.DarkYellow;
-                case 9: return ConsoleColor.DarkRed;
-                case 10: return ConsoleColor.Magenta;
-                case 11: return ConsoleColor.DarkCyan;
-                case 12: return ConsoleColor.DarkGray;
-                case 13: return ConsoleColor.Green;
-                case 14: return ConsoleColor.Blue;
-                case 15: return ConsoleColor.Gray;
-                default: throw new InvalidOperationException("Missing case number in ToConsoleColor");
-            }
-        }
-
         // Commodore 64 - walk Kernal Reset vector, MAIN, CRUNCH, GONE (EXECUTE), Statements, Functions, and Operators BASIC ROM code
         public override void Walk()
         {
@@ -461,6 +400,59 @@ namespace simple_emu_c64
             const int open_addr = 0xC000;
             const int open_size = 0x1000;
 
+            public void ApplyColor()
+            {
+                bool reverse = (this[199] != 0);
+                
+#if CBM_COLOR
+                if (reverse)
+                {
+                    Console.BackgroundColor = ToConsoleColor(this[646]);
+                    Console.ForegroundColor = ToConsoleColor(this[0xD021]);
+                }
+                else
+                {
+                    Console.ForegroundColor = ToConsoleColor(this[646]);
+                    Console.BackgroundColor = ToConsoleColor(this[0xD021]);
+                }
+#else
+            if (reverse)
+            {
+                Console.BackgroundColor = startup_fg;
+                Console.ForegroundColor = startup_bg;
+            }
+            else
+            {
+                Console.ForegroundColor = startup_fg;
+                Console.BackgroundColor = startup_bg;
+            }
+#endif
+            }
+
+            private ConsoleColor ToConsoleColor(byte CommodoreColor)
+            {
+                switch (CommodoreColor & 0xF)
+                {
+                    case 0: return ConsoleColor.Black;
+                    case 1: return ConsoleColor.White;
+                    case 2: return ConsoleColor.Red;
+                    case 3: return ConsoleColor.Cyan;
+                    case 4: return ConsoleColor.DarkMagenta;
+                    case 5: return ConsoleColor.DarkGreen;
+                    case 6: return ConsoleColor.DarkBlue;
+                    case 7: return ConsoleColor.Yellow;
+                    case 8: return ConsoleColor.DarkYellow;
+                    case 9: return ConsoleColor.DarkRed;
+                    case 10: return ConsoleColor.Magenta;
+                    case 11: return ConsoleColor.DarkCyan;
+                    case 12: return ConsoleColor.DarkGray;
+                    case 13: return ConsoleColor.Green;
+                    case 14: return ConsoleColor.Blue;
+                    case 15: return ConsoleColor.Gray;
+                    default: throw new InvalidOperationException("Missing case number in ToConsoleColor");
+                }
+            }
+
             public C64Memory(int ram_size, string basic_file, string chargen_file, string kernal_file)
             {
                 if (ram_size > 64 * 1024)
@@ -522,14 +514,15 @@ namespace simple_emu_c64
                             || (((ram[1] & 7) == 0) && addr >= io_addr && addr < io_addr + io.Length) // RAM banked in instead of IO
                           )
                         )
+                    {
                         ram[addr] = value; // banked RAM, and RAM under ROM
+                        if (addr == 646 || addr == 199)
+                            ApplyColor();
+                    }
                     else if (addr == 0xD021) // background
                     {
-#if CBM_COLOR
-                        Console.BackgroundColor = ToConsoleColor(value);
-#endif
                         io[addr - io_addr] = (byte)(value & 0xF); // store value so can be retrieved
-                        ApplyColor(Reverse(this));
+                        ApplyColor();
                     }
                     else if (addr >= color_addr && addr < color_addr + color_size)
                         io[addr - io_addr] = value;

@@ -68,6 +68,8 @@ namespace simple_emu_c64
     {
         public EmuPET(int ram_size, string basic_file, string edit_file, string kernal_file) : base(new PETMemory(ram_size, basic_file, edit_file, kernal_file))
         {
+            Console.BackgroundColor = startup_bg;
+            Console.ForegroundColor = startup_fg;
         }
 
         int startup_state = 0;
