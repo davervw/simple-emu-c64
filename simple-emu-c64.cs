@@ -94,7 +94,7 @@ namespace simple_emu_c64
                 {
                     if (ram_size == 0)
                         ram_size = 8 * 1024;
-                    cbm = new EmuPET(ram_size: ram_size, basic_file: $"pet{Path.DirectorySeparatorChar}basic2", edit_file: $"pet{Path.DirectorySeparatorChar}edit2g", kernal_file: $"pet{Path.DirectorySeparatorChar}kernal2");
+                    cbm = new EmuPET(ram_size: ram_size, basic_file: $"pet{Path.DirectorySeparatorChar}basic1", edit_file: $"pet{Path.DirectorySeparatorChar}edit1g", kernal_file: $"pet{Path.DirectorySeparatorChar}kernal1");
                 }
                 else
                 {
@@ -163,7 +163,7 @@ namespace simple_emu_c64
                             try
                             {
                                 if (go_num == 2001)
-                                    cbm = new EmuPET(ram_size: ram_size, basic_file: $"pet{Path.DirectorySeparatorChar}basic2", edit_file: $"pet{Path.DirectorySeparatorChar}edit2g", kernal_file: $"pet{Path.DirectorySeparatorChar}kernal2");
+                                    cbm = new EmuPET(ram_size: ram_size, basic_file: $"pet{Path.DirectorySeparatorChar}basic1", edit_file: $"pet{Path.DirectorySeparatorChar}edit1g", kernal_file: $"pet{Path.DirectorySeparatorChar}kernal1");
                                 else if (go_num == 20)
                                     cbm = new EmuVIC20(ram_size: ram_size, char_file: $"vic20{Path.DirectorySeparatorChar}chargen", basic_file: $"vic20{Path.DirectorySeparatorChar}basic", kernal_file: $"vic20{Path.DirectorySeparatorChar}kernal");
                                 else if (go_num == 64)
