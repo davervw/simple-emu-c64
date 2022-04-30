@@ -46,7 +46,7 @@
 // No PETSCII graphic characters, only supports printables CHR$(32) to CHR$(126), 
 //   and CHR$(147) clear screen, home/up/down/left/right, reverse on/off
 // No timers.  No interrupts except BRK.  No NMI/RESTORE key.  ESC is STOP key.
-// No loading of files implemented.
+//   but TI$/TI are simulated.
 //
 //   $00         (data direction missing)
 //   $01         Banking implemented (tape sense/controls missing)
