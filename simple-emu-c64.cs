@@ -48,10 +48,10 @@ namespace simple_emu_c64
             int ram_size = 0;
 
             Console.Error.WriteLine("6502 Emulator for Windows Console");
-            Console.Error.WriteLine("C64, VIC-20, PET, TED, ...");
+            Console.Error.WriteLine("C64, VIC-20, PET, TED, C128, ...");
             Console.Error.WriteLine("");
-            Console.Error.WriteLine("simple-emu-c64 version 1.7");
-            Console.Error.WriteLine("Copyright (c) 2020 David R. Van Wagner");
+            Console.Error.WriteLine("simple-emu-c64 version 1.8");
+            Console.Error.WriteLine("Copyright (c) 2020-2022 David R. Van Wagner");
             Console.Error.WriteLine("davevw.com");
             Console.Error.WriteLine("Open Source, MIT License");
             Console.Error.WriteLine("github.com/davervw/simple-emu-c64");
@@ -96,6 +96,10 @@ namespace simple_emu_c64
                         ram_size = 8 * 1024;
                     cbm = new EmuPET(ram_size: ram_size, basic_file: $"pet{Path.DirectorySeparatorChar}basic1", edit_file: $"pet{Path.DirectorySeparatorChar}edit1g", kernal_file: $"pet{Path.DirectorySeparatorChar}kernal1");
                 }
+                else if (args.Length > 0 && args[0].ToLower() == "c128")
+                {
+                    cbm = new EmuC128(basic_lo_file: $"c128{Path.DirectorySeparatorChar}basiclo", basic_hi_file: $"c128{Path.DirectorySeparatorChar}basichi", chargen_file: $"c128{Path.DirectorySeparatorChar}chargen", kernal_file: $"c128{Path.DirectorySeparatorChar}kernal");
+                }
                 else
                 {
                     error = true;
@@ -115,7 +119,7 @@ namespace simple_emu_c64
                 Console.Error.WriteLine("Usage:");
                 Console.Error.WriteLine("  simple-emu-c64                     (no arguments pauses, then starts c64)");
                 Console.Error.WriteLine("  simple-emu-c64 help                (shows usage)");
-                Console.Error.WriteLine("  simple-emu-c64 [system] {ram #}    (system=[c64|vic20|pet|c16|plus4|ted])");
+                Console.Error.WriteLine("  simple-emu-c64 [system] {ram #}    (system=[c64|vic20|pet|c16|plus4|ted|c128])");
                 Console.Error.WriteLine("  simple-emu-c64 [system] walk [addr 1 ...]");
                 Console.Error.WriteLine("");
                 Console.WriteLine();

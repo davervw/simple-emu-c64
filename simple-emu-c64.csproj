@@ -38,6 +38,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="emu6502.cs" />
+    <Compile Include="emuc128.cs" />
     <Compile Include="emucbm.cs" />
     <Compile Include="emuted.cs" />
     <Compile Include="emuc64.cs" />
