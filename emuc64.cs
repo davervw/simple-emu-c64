@@ -416,16 +416,16 @@ namespace simple_emu_c64
                     Console.BackgroundColor = ToConsoleColor(this[0xD021]);
                 }
 #else
-            if (reverse)
-            {
-                Console.BackgroundColor = startup_fg;
-                Console.ForegroundColor = startup_bg;
-            }
-            else
-            {
-                Console.ForegroundColor = startup_fg;
-                Console.BackgroundColor = startup_bg;
-            }
+                if (reverse)
+                {
+                    Console.BackgroundColor = startup_fg;
+                    Console.ForegroundColor = startup_bg;
+                }
+                else
+                {
+                    Console.ForegroundColor = startup_fg;
+                    Console.BackgroundColor = startup_bg;
+                }
 #endif
             }
 
