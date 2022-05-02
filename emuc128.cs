@@ -110,7 +110,7 @@ namespace simple_emu_c64
                 {
                     esc_mode = !esc_mode;
                     CHAROUT_TRAP = -1;
-                    return true; // trap again, but not outputting to stdout
+                    return true; // trap again, but not outputting to stdoutl
                 }
                 else if (esc_mode)
                 {
@@ -324,7 +324,7 @@ namespace simple_emu_c64
                     {
                         if (addr == 0xD021) // background
                         {
-                            io[addr - io_addr] = (byte)(value & 0xF); // store value so can be retrieved
+                            io[addr - io_addr] = (byte)((value & 0xF) | 0xF0); // store value so can be retrieved
                             ApplyColor();
                         }
                         else if (addr == 0xD505)
@@ -395,8 +395,7 @@ namespace simple_emu_c64
                 byte ram_cr = io[0xD506 - io_addr]; // RAM configuration register
                 int page0_addr = (io[0xD507 - io_addr] | (io[0xD508 - io_addr] << 8)) << 8;
                 int page1_addr = (io[0xD509 - io_addr] | (io[0xD50A - io_addr] << 8)) << 8;
-                if (addr < basic_lo_addr && (mmu_cr & 0x80) != 0 && !isWrite)
-                    return false;
+                // note: ignore (mmu_cr & 0x80) != 0 because expansion RAM not implemented in hardware
                 if (addr >= kernal_addr && (mmu_cr & 0x30) != 0x30 && !isWrite)
                     return false;
                 if (addr >= basic_hi_addr && addr < basic_hi_addr + basic_hi_size && (mmu_cr & 0x0C) != 0x0C && !isWrite)
