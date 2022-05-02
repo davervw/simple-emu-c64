@@ -72,7 +72,7 @@
 
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //uncomment for Commodore foreground, background colors and reverse emulation
-//#define CBM_COLOR
+#define CBM_COLOR
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 using System;
@@ -256,6 +256,12 @@ namespace simple_emu_c64
             //    }
             //}
 
+            if (Program.go_num == 64)
+            {
+                exit = true;
+                return true;
+            }
+
             return base.ExecutePatch();
         }
 
@@ -394,11 +400,10 @@ namespace simple_emu_c64
                 io[0xD50A - io_addr] = 0; // stack page bank
                 io[0xD50B - io_addr] = 0x20; // MMU verison register value 128K, verison 0
 
-                io[0xDD00 - io_addr] = 0xC0; // SERIAL CLK/DATA INPUT pulled HIGH, no devices present
-
-                // initialize DDR and memory mapping to defaults
-                //ram[0] = 0xEF;
-                //ram[1] = 0x07;
+                io[0xDC00 - io_addr] = 0xFF;
+                io[0xDC01 - io_addr] = 0xFF;
+                io[0xDD00 - io_addr] = 0xFF; // including SERIAL CLK/DATA INPUT pulled HIGH, no devices present
+                io[0xDD01 - io_addr] = 0xFF;
             }
 
             public byte this[ushort addr]
@@ -424,8 +429,7 @@ namespace simple_emu_c64
                             return vdc.AddressRegister;
                         else if (addr == 0xD601)
                             return vdc.DataRegister;
-                        else if (addr == 0xDC0D)
-                            io[addr - io_addr] ^= 0x08; // toggle serial data buffer full/empty because ROM expects it
+                        
                         return io[addr - io_addr];
                     }
                     else if (IsBasicLow(addr))
@@ -460,7 +464,11 @@ namespace simple_emu_c64
                             ApplyColor();
                         }
                         else if (addr == 0xD505)
+                        {
                             System.Diagnostics.Debug.WriteLine($"Mode Configuration Register set 0x{value:X02}");
+                            if ((value & 0x40) != 0)
+                                Program.go_num = 64;
+                        }
                         else if (addr >= 0xD500 && addr < 0xD50B) // MMU up to but not including version register
                             io[addr - io_addr] = value;
                         else if (addr == 0xD600)
