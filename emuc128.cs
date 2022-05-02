@@ -89,6 +89,7 @@ namespace simple_emu_c64
 
         private int startup_state = 0;
         private int go_state = 0;
+        private bool esc_mode = false;
 
         // C64 patches
         //   34/35 ($22/$23) = INDEX, temporary BASIC pointer, set before CLR
@@ -103,158 +104,21 @@ namespace simple_emu_c64
         //   $B7F7 = Convert floating point to 2 byte integer Y/A
         protected override bool ExecutePatch()
         {
-            //if (memory[PC] == 0x6C && memory[(ushort)(PC + 1)] == 0x30 && memory[(ushort)(PC + 2)] == 0x03) // catch JMP(LOAD_VECTOR), redirect to jump table
-            //{
-            //    CheckBypassSETLFS();
-            //    CheckBypassSETNAM();
-            //    // note: A register has same purpose LOAD/VERIFY
-            //    X = memory[0xC3];
-            //    Y = memory[0xC4];
-            //    PC = 0xFFD5; // use KERNAL JUMP TABLE instead, so LOAD is hooked by base
-            //    return true; // re-execute
-            //}
-            //if (memory[PC] == 0x6C && memory[(ushort)(PC + 1)] == 0x32 && memory[(ushort)(PC + 2)] == 0x03) // catch JMP(SAVE_VECTOR), redirect to jump table
-            //{
-            //    CheckBypassSETLFS();
-            //    CheckBypassSETNAM();
-            //    X = memory[0xAE];
-            //    Y = memory[0xAF];
-            //    A = 0xC1;
-            //    PC = 0xFFD8; // use KERNAL JUMP TABLE instead, so SAVE is hooked by base
-            //    return true; // re-execute
-            //}
-            //else if (PC == 0xA474 || PC == LOAD_TRAP) // READY
-            //{
-            //    go_state = 0;
-
-            //    if (startup_state == 0 && (StartupPRG != null || PC == LOAD_TRAP))
-            //    {
-            //        bool is_basic;
-            //        if (PC == LOAD_TRAP)
-            //        {
-            //            is_basic = (
-            //                FileVerify == false
-            //                && FileSec == 0 // relative load, not absolute
-            //                && LO(FileAddr) == memory[43] // requested load address matches BASIC start
-            //                && HI(FileAddr) == memory[44]);
-            //            if (FileLoad(out byte err))
-            //            {
-            //                // set End of Program
-            //                memory[0xAE] = (byte)FileAddr;
-            //                memory[0xAF] = (byte)(FileAddr >> 8);
-            //            }
-            //            else
-            //            {
-            //                System.Diagnostics.Debug.WriteLine(string.Format("FileLoad() failed: err={0}, file {1}", err, StartupPRG));
-            //                C = true; // signal error
-            //                SetA(err); // FILE NOT FOUND or VERIFY
-
-            //                // so doesn't repeat
-            //                StartupPRG = null;
-            //                LOAD_TRAP = -1;
-
-            //                return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
-            //            }
-            //        }
-            //        else
-            //        {
-            //            FileName = StartupPRG;
-            //            FileAddr = (ushort)(memory[43] | (memory[44] << 8));
-            //            is_basic = LoadStartupPrg();
-            //            // set End of Program
-            //            memory[0xAE] = (byte)FileAddr;
-            //            memory[0xAF] = (byte)(FileAddr >> 8);
-            //        }
-
-            //        StartupPRG = null;
-
-            //        if (is_basic)
-            //        {
-            //            //UNNEW that I used in late 1980s, should work well for loading a program too, probably gleaned from BASIC ROM
-            //            //listed here as reference, adapted to use in this state machine, ExecutePatch()
-            //            //ldy #0
-            //            //lda #1
-            //            //sta(43),y
-            //            //iny
-            //            //sta(43),y
-            //            //jsr $a533 ; LINKPRG
-            //            //clc
-            //            //lda $22
-            //            //adc #2
-            //            //sta 45
-            //            //lda $23
-            //            //adc #0
-            //            //sta 46
-            //            //lda #0
-            //            //jsr $a65e ; CLEAR/CLR
-            //            //jmp $a474 ; READY
-
-            //            // initialize first couple bytes (may only be necessary for UNNEW?)
-            //            ushort addr = (ushort)(memory[43] | (memory[44] << 8));
-            //            memory[addr] = 1;
-            //            memory[(ushort)(addr + 1)] = 1;
-
-            //            startup_state = 1; // should be able to regain control when returns...
-
-            //            return ExecuteJSR(0xA533); // LINKPRG
-            //        }
-            //        else
-            //        {
-            //            LOAD_TRAP = -1;
-            //            X = LO(FileAddr);
-            //            Y = HI(FileAddr);
-            //            C = false;
-            //        }
-            //    }
-            //    else if (startup_state == 1)
-            //    {
-            //        ushort addr = (ushort)(memory[0x22] | (memory[0x23] << 8) + 2);
-            //        memory[45] = (byte)addr;
-            //        memory[46] = (byte)(addr >> 8);
-
-            //        SetA(0);
-
-            //        startup_state = 2; // should be able to regain control when returns...
-
-            //        return ExecuteJSR(0xA65E); // CLEAR/CLR
-            //    }
-            //    else if (startup_state == 2)
-            //    {
-            //        if (PC == LOAD_TRAP)
-            //        {
-            //            X = LO(FileAddr);
-            //            Y = HI(FileAddr);
-            //        }
-            //        else
-            //        {
-            //            CBM_Console.Push("RUN\r");
-            //            PC = 0xA47B; // skip READY message, but still set direct mode, and continue to MAIN
-            //        }
-            //        C = false; // signal success
-            //        startup_state = 0;
-            //        LOAD_TRAP = -1;
-            //        return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
-            //    }
-            //}
-            //else if (PC == 0xA815) // Execute after GO
-            //{
-            //    if (go_state == 0 && A >= (byte)'0' && A <= (byte)'9')
-            //    {
-            //        go_state = 1;
-            //        return ExecuteJSR(0xAD8A); // Evaluate expression, check data type
-            //    }
-            //    else if (go_state == 1)
-            //    {
-            //        go_state = 2;
-            //        return ExecuteJSR(0xB7F7); // Convert fp to 2 byte integer
-            //    }
-            //    else if (go_state == 2)
-            //    {
-            //        Program.go_num = (ushort)(Y + (A << 8));
-            //        exit = true;
-            //        return true;
-            //    }
-            //}
+            if (PC == CHAROUT_TRAP)
+            {
+                if (A == 27)
+                {
+                    esc_mode = !esc_mode;
+                    CHAROUT_TRAP = -1;
+                    return true; // trap again, but not outputting to stdout
+                }
+                else if (esc_mode)
+                {
+                    esc_mode = false;
+                    CHAROUT_TRAP = -1;
+                    return true; // trap again, but not outputting to stdout
+                }
+            }
 
             if (Program.go_num == 64)
             {
