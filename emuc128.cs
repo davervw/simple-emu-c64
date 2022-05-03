@@ -72,7 +72,7 @@
 
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //uncomment for Commodore foreground, background colors and reverse emulation
-#define CBM_COLOR
+//#define CBM_COLOR
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 using System;
@@ -90,18 +90,8 @@ namespace simple_emu_c64
         private int startup_state = 0;
         private int go_state = 0;
         private bool esc_mode = false;
+        private byte io_bank = 0;
 
-        // C64 patches
-        //   34/35 ($22/$23) = INDEX, temporary BASIC pointer, set before CLR
-        //   43/44 = start of BASIC program in RAM
-        //   45/46 = end of BASIC program in RAM, start of variables
-        //   $A474 = ROM BASIC READY prompt
-        //   $A47B = ROM BASIC MAIN, in direct mode but skip READY prompt
-        //   $A533 = ROM LNKPRG/LINKPRG
-        //   $A65E = CLEAR/CLR - erase variables
-        //   $A815 = EXECUTE after parsing GO token
-        //   $AD8A = Evaluate expression, check data type
-        //   $B7F7 = Convert floating point to 2 byte integer Y/A
         protected override bool ExecutePatch()
         {
             if (PC == CHAROUT_TRAP)
@@ -119,6 +109,62 @@ namespace simple_emu_c64
                     return true; // trap again, but not outputting to stdout
                 }
             }
+            if (memory[PC] == 0x6C && memory[(ushort)(PC + 1)] == 0x30 && memory[(ushort)(PC + 2)] == 0x03) // catch JMP(LOAD_VECTOR), redirect to jump table
+            {
+                int addr128k = 0x330;
+                if (((C128Memory)memory).IsRam(ref addr128k) && addr128k == 0x330)
+                {
+                    CheckBypassSETLFS();
+                    CheckBypassSETNAM();
+                    // note: A register has same purpose LOAD/VERIFY
+                    X = memory[0xC3];
+                    Y = memory[0xC4];
+                    PC = 0xFFD5; // use KERNAL JUMP TABLE instead, so LOAD is hooked by base
+                    return true; // re-execute
+                }
+            }
+            if (memory[PC] == 0x6C && memory[(ushort)(PC + 1)] == 0x32 && memory[(ushort)(PC + 2)] == 0x03) // catch JMP(SAVE_VECTOR), redirect to jump table
+            {
+                int addr128k = 0x332;
+                if (((C128Memory)memory).IsRam(ref addr128k) && addr128k == 0x332)
+                {
+                    CheckBypassSETLFS();
+                    CheckBypassSETNAM();
+                    X = memory[0xAE];
+                    Y = memory[0xAF];
+                    A = 0xC1;
+                    PC = 0xFFD8; // use KERNAL JUMP TABLE instead, so SAVE is hooked by base
+                    return true; // re-execute
+                }
+            }
+
+            // Note: BANK # (0-15) for file i/o is in $C6
+            // Note: BANK # (0-15) for filename is in $C7
+            // Note: BANK # to MMU CR translation table in Kernal at $F7F0
+            if (PC == 0xFFBD) // SETNAM
+            {
+                // set to name BANK (reference $FF68 JSETBNK)
+                var save_mcr = memory[0xFF00];
+                memory[0xFF00] = 0; // switch in KERNAL where mcr table is located
+                memory[0xFF00]= memory[(ushort)(0xF7F0 + memory[0xC7])]; // switch to name bank
+                
+                var result = base.ExecutePatch(); // DELEGATE TO emucbm
+
+                memory[0xFF00] = save_mcr; // restore MCR
+                return result;
+            }
+            else if (PC == 0xFFD5 || PC == 0xFFD8) // LOAD OR SAVE
+            {
+                // set to data i/o BANK
+                var save_mcr = memory[0xFF00];
+                memory[0xFF00] = 0; // switch in KERNAL where mcr table is located
+                memory[0xFF00] = memory[(ushort)(0xF7F0 + memory[0xC6])]; // switch to name bank
+
+                var result = base.ExecutePatch(); // DELEGATE TO emucbm
+
+                memory[0xFF00] = save_mcr; // restore MCR
+                return result;
+            }
 
             if (Program.go_num == 64)
             {
@@ -131,12 +177,21 @@ namespace simple_emu_c64
 
         private void CheckBypassSETNAM()
         {
+            var save_mcr = memory[0xFF00];
+            memory[0xFF00] = 0; // switch in KERNAL where mcr table is located
+
             // In case caller bypassed calling SETNAM, get from lower memory
             byte name_len = memory[0xB7];
             ushort name_addr = (ushort)(memory[0xBB] | (memory[0xBC] << 8));
             StringBuilder name = new StringBuilder();
+
+            memory[0xFF00] = memory[(ushort)(0xF7F0 + memory[0xC7])]; // switch to name bank
+
             for (byte i = 0; i < name_len; ++i)
                 name.Append((char)memory[(ushort)(name_addr + i)]);
+
+            memory[0xFF00] = save_mcr; // restore MCR
+
             if (FileName != name.ToString())
             {
                 System.Diagnostics.Debug.WriteLine(string.Format("bypassed SETNAM {0}", name.ToString()));
@@ -255,7 +310,7 @@ namespace simple_emu_c64
                 for (int i = 0; i < io.Length; ++i)
                     io[i] = 0x0;
 
-                io[0xD500 - io_addr] = 0; // default MMU 
+                io[mmu_addr - io_addr] = 0; // default MMU CR
                 io[0xD505 - io_addr] = 0xB9; // 40/80 up, no /GAME, no /EXROM, C128 mode, Fast serial out, 8502 select
                 io[0xD506 - io_addr] = 0; // no common RAM at startup
                 io[0xD507 - io_addr] = 0; // zero page default
@@ -264,10 +319,10 @@ namespace simple_emu_c64
                 io[0xD50A - io_addr] = 0; // stack page bank
                 io[0xD50B - io_addr] = 0x20; // MMU verison register value 128K, verison 0
 
-                io[0xDC00 - io_addr] = 0xFF;
-                io[0xDC01 - io_addr] = 0xFF;
-                io[0xDD00 - io_addr] = 0xFF; // including SERIAL CLK/DATA INPUT pulled HIGH, no devices present
-                io[0xDD01 - io_addr] = 0xFF;
+                io[0xDC00 - io_addr] = 0xFF; // CIA #1 PORT A
+                io[0xDC01 - io_addr] = 0xFF; // CIA #1 PORT B
+                io[0xDD00 - io_addr] = 0xFF; // CIA #2 PORT A including SERIAL CLK/DATA INPUT pulled HIGH, no devices present
+                io[0xDD01 - io_addr] = 0xFF; // CIA #2 PORT B
             }
 
             public byte this[ushort addr]
@@ -277,8 +332,6 @@ namespace simple_emu_c64
                     int addr128k = addr;
                     if (addr >= 0xFF00 && addr <= 0xFF04)
                         return io[mmu_addr + (addr & 0xF) - io_addr];
-                    else if (addr >= 0xFF01 && addr <= 0xFF04)
-                        return io[(addr & 0xFF) + mmu_addr - io_addr];
                     else if (IsRam(ref addr128k))
                     {
                         return ram[addr128k];
@@ -333,7 +386,7 @@ namespace simple_emu_c64
                             if ((value & 0x40) != 0)
                                 Program.go_num = 64;
                         }
-                        else if (addr >= 0xD500 && addr < 0xD50B) // MMU up to but not including version register
+                        else if (addr >= mmu_addr && addr < mmu_addr + mmu_size - 1) // MMU up to but not including version register
                             io[addr - io_addr] = value;
                         else if (addr == 0xD600)
                             vdc.AddressRegister = value;
@@ -389,7 +442,7 @@ namespace simple_emu_c64
                 return (addr >= io_addr && addr < io_addr + io_size && (mmu_cr & 0x01) == 0);
             }
 
-            private bool IsRam(ref int addr, bool isWrite = false)
+            public bool IsRam(ref int addr, bool isWrite = false)
             {
                 byte mmu_cr = io[mmu_addr - io_addr]; // MMU configuration register
                 byte ram_cr = io[0xD506 - io_addr]; // RAM configuration register
@@ -452,6 +505,8 @@ namespace simple_emu_c64
                 return true;
             }
         }
+
+        ///////////////////////////////////////////////////////////////////////
 
         class VDC8563
         {
