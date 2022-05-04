@@ -87,7 +87,7 @@ namespace simple_emu_c64
             {
                 go_state = 0;
 
-                if (StartupPRG != null) // User requested program be loaded at startup
+                if (startup_state == 0 && (StartupPRG != null || PC == LOAD_TRAP))
                 {
                     bool is_basic;
                     if (PC == LOAD_TRAP)
