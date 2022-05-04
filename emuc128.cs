@@ -112,7 +112,7 @@ namespace simple_emu_c64
             if (memory[PC] == 0x6C && memory[(ushort)(PC + 1)] == 0x30 && memory[(ushort)(PC + 2)] == 0x03) // catch JMP(LOAD_VECTOR), redirect to jump table
             {
                 int addr128k = 0x330;
-                if (((C128Memory)memory).IsRam(ref addr128k) && addr128k == 0x330)
+                if (IsRam(ref addr128k) && addr128k == 0x330)
                 {
                     CheckBypassSETLFS();
                     CheckBypassSETNAM();
@@ -126,7 +126,7 @@ namespace simple_emu_c64
             if (memory[PC] == 0x6C && memory[(ushort)(PC + 1)] == 0x32 && memory[(ushort)(PC + 2)] == 0x03) // catch JMP(SAVE_VECTOR), redirect to jump table
             {
                 int addr128k = 0x332;
-                if (((C128Memory)memory).IsRam(ref addr128k) && addr128k == 0x332)
+                if (IsRam(ref addr128k) && addr128k == 0x332)
                 {
                     CheckBypassSETLFS();
                     CheckBypassSETNAM();
@@ -141,7 +141,7 @@ namespace simple_emu_c64
             // Note: BANK # (0-15) for file i/o is in $C6
             // Note: BANK # (0-15) for filename is in $C7
             // Note: BANK # to MMU CR translation table in Kernal at $F7F0
-            if (PC == 0xFFBD) // SETNAM
+            if (PC == 0xFFBD && IsKernal(PC)) // SETNAM
             {
                 // set to name BANK (reference $FF68 JSETBNK)
                 var save_mcr = memory[0xFF00];
@@ -153,18 +153,129 @@ namespace simple_emu_c64
                 memory[0xFF00] = save_mcr; // restore MCR
                 return result;
             }
-            else if (PC == 0xFFD5 || PC == 0xFFD8) // LOAD OR SAVE
+            else if ((PC == 0xFFD5 || PC == 0xFFD8) && IsKernal(PC)) // LOAD OR SAVE
             {
                 // set to data i/o BANK
                 var save_mcr = memory[0xFF00];
                 memory[0xFF00] = 0; // switch in KERNAL where mcr table is located
-                memory[0xFF00] = memory[(ushort)(0xF7F0 + memory[0xC6])]; // switch to name bank
+                memory[0xFF00] = memory[(ushort)(0xF7F0 + memory[0xC6])]; // switch to i/o bank
 
                 var result = base.ExecutePatch(); // DELEGATE TO emucbm
 
                 memory[0xFF00] = save_mcr; // restore MCR
                 return result;
             }
+            else if ((PC == 0x4D37 || PC == LOAD_TRAP) && (IsBasicLow(PC) || IsBasicHigh(PC))) // READY
+            {
+                go_state = 0;
+
+                if (startup_state == 0 && (StartupPRG != null || PC == LOAD_TRAP))
+                {
+                    bool is_basic;
+                    if (PC == LOAD_TRAP)
+                    {
+                        is_basic = (
+                            FileVerify == false
+                            && FileSec == 0 // relative load, not absolute
+                            && LO(FileAddr) == memory[45] // requested load address matches BASIC start
+                            && HI(FileAddr) == memory[46]);
+                        if (FileLoad(out byte err))
+                        {
+                            memory[0xAE] = (byte)FileAddr;
+                            memory[0xAF] = (byte)(FileAddr >> 8);
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine(string.Format("FileLoad() failed: err={0}, file {1}", err, StartupPRG));
+                            C = true; // signal error
+                            SetA(err); // FILE NOT FOUND or VERIFY
+
+                            // so doesn't repeat
+                            StartupPRG = null;
+                            LOAD_TRAP = -1;
+
+                            return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
+                        }
+                    }
+                    else
+                    {
+                        FileName = StartupPRG;
+                        FileAddr = (ushort)(memory[45] | (memory[46] << 8));
+                        is_basic = LoadStartupPrg();
+                        //memory[0xAE] = (byte)FileAddr;
+                        //memory[0xAF] = (byte)(FileAddr >> 8);
+                    }
+
+                    StartupPRG = null;
+
+                    if (is_basic)
+                    {
+                        // initialize first couple bytes (may only be necessary for UNNEW?)
+                        ushort addr = (ushort)(memory[45] | (memory[46] << 8));
+                        memory[addr] = 1;
+                        memory[(ushort)(addr + 1)] = 1;
+
+                        startup_state = 1; // should be able to regain control when returns...
+
+                        return ExecuteJSR(0xAF87); // LINKPRG
+                    }
+                    else
+                    {
+                        LOAD_TRAP = -1;
+                        X = LO(FileAddr);
+                        Y = HI(FileAddr);
+                        C = false;
+                    }
+                }
+                else if (startup_state == 1)
+                {
+                    ushort addr = (ushort)(memory[0x24] | (memory[0x25] << 8) + 2);
+                    memory[47] = (byte)addr;
+                    memory[48] = (byte)(addr >> 8);
+
+                    SetA(0);
+
+                    startup_state = 2; // should be able to regain control when returns...
+
+                    return ExecuteJSR(0x51F8); // CLEAR/CLR
+                }
+                else if (startup_state == 2)
+                {
+                    if (PC == LOAD_TRAP)
+                    {
+                        X = LO(FileAddr);
+                        Y = HI(FileAddr);
+                    }
+                    else
+                    {
+                        CBM_Console.Push("RUN\r");
+                        PC = 0xA47B; // skip READY message, but still set direct mode, and continue to MAIN
+                    }
+                    C = false; // signal success
+                    startup_state = 0;
+                    LOAD_TRAP = -1;
+                    return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
+                }
+            }
+            //else if (PC == 0xC815) // Execute after GO
+            //{
+            //    if (go_state == 0 && A >= (byte)'0' && A <= (byte)'9')
+            //    {
+            //        go_state = 1;
+            //        return ExecuteJSR(0xCD8A); // Evaluate expression, check data type
+            //    }
+            //    else if (go_state == 1)
+            //    {
+            //        go_state = 2;
+            //        return ExecuteJSR(0xD7F7); // Convert fp to 2 byte integer
+            //    }
+            //    else if (go_state == 2)
+            //    {
+            //        Program.go_num = (ushort)(Y + (A << 8));
+            //        exit = true;
+            //        return true;
+            //    }
+            //}
 
             if (Program.go_num == 64)
             {
@@ -174,6 +285,18 @@ namespace simple_emu_c64
 
             return base.ExecutePatch();
         }
+
+        public bool IsBasicLow(ushort addr)
+            => ((C128Memory)memory).IsBasicLow(addr);
+
+        public bool IsBasicHigh(ushort addr)
+            => ((C128Memory)memory).IsBasicHigh(addr);
+
+        public bool IsKernal(ushort addr) 
+            => ((C128Memory)memory).IsKernal(addr);
+
+        public bool IsRam(ref int addr)
+            => ((C128Memory)memory).IsRam(ref addr);
 
         private void CheckBypassSETNAM()
         {
@@ -333,9 +456,7 @@ namespace simple_emu_c64
                     if (addr >= 0xFF00 && addr <= 0xFF04)
                         return io[mmu_addr + (addr & 0xF) - io_addr];
                     else if (IsRam(ref addr128k))
-                    {
                         return ram[addr128k];
-                    }
                     else if (IsIO(addr))
                     {
                         if (IsColor(addr))
@@ -413,30 +534,30 @@ namespace simple_emu_c64
                 return (addr >= chargen_addr && addr < chargen_addr + chargen_size && (mmu_cr & 0x30) == 0);
             }
 
-            private bool IsKernal(ushort addr)
+            public bool IsKernal(ushort addr)
             {
                 byte mmu_cr = io[mmu_addr - io_addr];
                 return (addr >= kernal_addr && !(addr >= chargen_addr && addr < chargen_addr + chargen_size) && (mmu_cr & 0x30) == 0);
             }
 
-            private bool IsBasicHigh(ushort addr)
+            public bool IsBasicHigh(ushort addr)
             {
                 byte mmu_cr = io[mmu_addr - io_addr];
                 return (addr >= basic_hi_addr && addr < basic_hi_addr + basic_hi_size && (mmu_cr & 0x0C) == 0);
             }
 
-            private bool IsBasicLow(ushort addr)
+            public bool IsBasicLow(ushort addr)
             {
                 byte mmu_cr = io[mmu_addr - io_addr];
                 return (addr >= basic_lo_addr && addr < basic_lo_addr + basic_lo_size && (mmu_cr & 0x02) == 0);
             }
 
-            private bool IsColor(ushort addr)
+            public bool IsColor(ushort addr)
             {
                 return IsIO(addr) && addr >= color_addr && addr < color_addr + color_size;
             }
 
-            private bool IsIO(ushort addr)
+            public bool IsIO(ushort addr)
             {
                 byte mmu_cr = io[mmu_addr - io_addr];
                 return (addr >= io_addr && addr < io_addr + io_size && (mmu_cr & 0x01) == 0);
