@@ -88,9 +88,8 @@ namespace simple_emu_c64
         }
 
         private int startup_state = 0;
-        private int go_state = 0;
+        //private int go_state = 0;
         private bool esc_mode = false;
-        private byte io_bank = 0;
 
         protected override bool ExecutePatch()
         {
@@ -167,7 +166,7 @@ namespace simple_emu_c64
             }
             else if ((PC == 0x4D37 || PC == LOAD_TRAP) && (IsBasicLow(PC) || IsBasicHigh(PC))) // READY
             {
-                go_state = 0;
+                //go_state = 0;
 
                 if (startup_state == 0 && (StartupPRG != null || PC == LOAD_TRAP))
                 {
