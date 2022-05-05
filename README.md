@@ -1,5 +1,5 @@
 # simple-emu-c64 #
-Here is a simple Commodore (64, PET 2001, VIC-20, Commodore 16, Plus/4, ...) and 6502 Emulator I wrote from scratch.  Runs in a text console window.
+Here is a simple Commodore (64, 128, PET 2001, VIC-20, Commodore 16, Plus/4, ...) and 6502 Emulator I wrote from scratch.  Runs in a text console window.
 
 Notable features
 
@@ -15,6 +15,7 @@ USAGE:
 
     simple-emu-c64
     simple-emu-c64 help
+    simple-emu-c64 c128
     simple-emu-c64 c64 ram 4
     simple-emu-c64 c64
     simple-emu-c64 c64 startup.prg
@@ -53,9 +54,12 @@ CREDITS:
 * [Micro Logic Corp. 6502 (65XX) Microprocessor Instant Reference Card](https://archive.org/details/6502MicroprocessorInstantReferenceCard)
 * Compute's [Mapping the Commodore 64](https://archive.org/details/Compute_s_Mapping_the_Commodore_64)
 * Compute's [Mapping the VIC](https://archive.org/details/COMPUTEs_Mapping_the_VIC_1984_COMPUTE_Publications)
+* Compute's [Mapping the Commodore 128](https://archive.org/details/Compute_s_Mapping_the_Commodore_128)
+* [Commodore 128 Programmer's Reference Guide](https://archive.org/details/C128_Programmers_Reference_Guide_1986_Bamtam_Books)
 * [VICE](https://vice-emu.sourceforge.io/) for performing trace comparisons 
-* Commodore 64 and VIC-20 BASIC/KERNAL ROM from [VICE](https://vice-emu.sourceforge.io/) or [Zimmers.net](http://www.zimmers.net/anonftp/pub/cbm/firmware/computers/c64/) or other
+* Commodore ROMs from [VICE](https://vice-emu.sourceforge.io/) or [Zimmers.net](http://www.zimmers.net/anonftp/pub/cbm/firmware/computers/c64/) or other
 * Inspired by [mist64/cbmbasic](https://github.com/mist64/cbmbasic)
+* Inspired by [Retroshield 6502](http://www.8bitforce.com/projects/retroshield)
 * Built with Microsoft Visual Studio 2017, .NET Framework 4, C#
 
 Read the blog Entry at [davevw.com](https://techwithdave.davevw.com/2020/03/simple-emu-c64.html)
