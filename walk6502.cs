@@ -34,6 +34,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace simple_emu_c64
 {
@@ -98,6 +99,11 @@ namespace simple_emu_c64
                             {
                                 Walk(cpu, addr2); // walk call recursively, then continue next address
                                 addr += bytes;
+                                if ((addr2 == 0xFF7D && cpu is EmuC128)
+                                    || ((addr2 == 0xFF4F || addr2 == 0xFBD8) && cpu is EmuTED))
+                                {
+                                    addr += DisplayStringZ(cpu, addr); // Print Immediate
+                                }
                             }
                             else
                                 addr = addr2;
@@ -113,5 +119,37 @@ namespace simple_emu_c64
             }
         }
 
+        static char[] space_separator = new char[] { ' ' };
+        static string Unprintables = "{}\\|~";
+
+        private static ushort DisplayStringZ(Emu6502 cpu, ushort addr)
+        {
+            ushort count = 0;
+            Console.Write($"{addr:X4}");
+            StringBuilder s = new StringBuilder();
+            while (true)
+            {
+                cpu.Disassemble(addr, out bool conditional, out var bytes, out var addr2, out var line);
+                var data = line.Substring(5, 8).Split(space_separator, StringSplitOptions.RemoveEmptyEntries);
+                foreach (string hex in data)
+                {
+                    Console.Write($" {hex}");
+                    var value = byte.Parse(hex, System.Globalization.NumberStyles.HexNumber);
+                    if (value >= 32 && value < 127 && !Unprintables.Contains((char)value))
+                        s.Append((char)value);
+                    else if (value != 0)
+                        s.Append('~');
+                    ++count;
+                    if (value == 0)
+                    {
+                        if (s.Length > 0)
+                            Console.Write($" '{s}");
+                        Console.WriteLine();
+                        return count;
+                    }
+                    ++addr;
+                }
+            }
+        }
     }
 }
