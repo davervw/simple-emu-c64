@@ -256,6 +256,35 @@ namespace simple_emu_c64
                     return true; // overriden, and PC changed, so caller should reloop before execution to allow breakpoint/trace/ExecutePatch/etc.
                 }
             }
+            else if (PC == 0x05A4A) // GO next token is not TO, used to catch 2001 as ASCII
+            {
+                ushort addr = (ushort)(memory[0x3D] | (memory[0x3E] << 8)); // pointer to current token in buffer
+                var s = new StringBuilder();
+                while (s.Length < 80) // some limit
+                {
+                    char c = (char)memory[addr++];
+                    if (c >= '0' && c <= '9')
+                        s.Append(c);
+                    else if (c == 0 || s.Length > 0)
+                        break;
+                }
+                ushort go_num;
+                if (ushort.TryParse(s.ToString(), out go_num) && go_num == 2001)
+                {
+                    Program.go_num = go_num;
+                    exit = true;
+                    return true;
+                }
+            }
+            else if (PC == 0x05A4D) // GO value expression evaluated to byte stored in .X, catch other byte values we want that are not 64
+            {
+                if (X == 20 || X == 4 || X == 16)
+                {
+                    Program.go_num = X;
+                    exit = true;
+                    return true;
+                }
+            }
             //else if (PC == 0xC815) // Execute after GO
             //{
             //    if (go_state == 0 && A >= (byte)'0' && A <= (byte)'9')
