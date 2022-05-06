@@ -278,7 +278,7 @@ namespace simple_emu_c64
             }
             else if (PC == 0x05A4D) // GO value expression evaluated to byte stored in .X, catch other byte values we want that are not 64
             {
-                if (X == 20 || X == 4 || X == 16)
+                if (X == 20 || X == 4 || X == 16 || X == 128)
                 {
                     Program.go_num = X;
                     exit = true;
