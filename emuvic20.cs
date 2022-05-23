@@ -82,26 +82,26 @@ namespace simple_emu_c64
 
         private static byte RamSizeToRamConfig(int ram_size)
         {
-            if (ram_size < 7 * 1024)
-                return 0x00; // 4K BASE
-            else if (ram_size < 12 * 1024)
-                return 0x01; // 7K = 3K EXP + 4K BASE
-            else if (ram_size < 15 * 1024)
-                return 0x02; // 12K = 4K BASE + 8K EXP
-            else if (ram_size < 20 * 1024)
-                return 0x03; // 15K = 3K EXP + 4K BASE + 8K EXP (3K NOT AVAILABLE TO BASIC)
-            else if (ram_size < 23 * 1024)
-                return 0x06; // 20K = 4K BASE + 16K EXP
-            else if (ram_size < 28 * 1024)
-                return 0x07; // 23K = 3K EXP + 4K BASE + 16K EXP (3K NOT AVAILABLE TO BASIC)
-            else if (ram_size < 31 * 1024)
-                return 0x0E; // 28K = 4K BASE + 24K EXP
-            else if (ram_size < 36 * 1024)
-                return 0x0F; // 31K = 3K EXP + 3K BASE + 24K EXP (3K NOT AVAILABLE TO BASIC)
-            else if (ram_size < 39 * 1024)
-                return 0x1E; // 36K = 3K EXP + 3K BASE + 32K EXP (11K NOT AVAILABLE TO BASIC)
+            if (ram_size < 8 * 1024)
+                return 0x00; // 5K = 1K LOW + 4K BASE
+            else if (ram_size < 13 * 1024)
+                return 0x01; // 8K = 1K LOW + 3K EXP + 4K BASE (***ONLY*** CFG WHERE EXTRA 3K IS AVAILABLE TO BASIC)
+            else if (ram_size < 16 * 1024)
+                return 0x02; // 13K = 1K LOW + 4K BASE + 8K EXP
+            else if (ram_size < 21 * 1024)
+                return 0x03; // 16K = 1K LOW + 3K EXP + 4K BASE + 8K EXP (3K NOT AVAILABLE TO BASIC)
+            else if (ram_size < 24 * 1024)
+                return 0x06; // 21K = 1K LOW + 4K BASE + 16K EXP
+            else if (ram_size < 29 * 1024)
+                return 0x07; // 24K = 1K LOW + 3K EXP + 4K BASE + 16K EXP (3K NOT AVAILABLE TO BASIC)
+            else if (ram_size < 32 * 1024)
+                return 0x0E; // 29K = 1K LOW + 4K BASE + 24K EXP
+            else if (ram_size < 37 * 1024)
+                return 0x0F; // 32K = 1K LOW + 3K EXP + 4K BASE + 24K EXP (3K NOT AVAILABLE TO BASIC)
+            else if (ram_size < 40 * 1024)
+                return 0x1E; // 37K = 1K LOW + 4K BASE + 32K EXP (11K NOT AVAILABLE TO BASIC)
             else
-                return 0x1F; // 39K
+                return 0x1F; // 40K = 1K LOW + 3K EXP + 4K BASE + 32K EXP (ALL NOT AVAILABLE TO BASIC)
         }
 
         static int go_state = 0;
@@ -280,17 +280,8 @@ namespace simple_emu_c64
             {
                 this.ram_banks = ram_banks;
 
-                // compute max ram address, allocate array based on that, even though all memory may not be present
-                int ram_size = 0x2000;
-                if ((ram_banks & 0x10) != 0)
-                    ram_size = 0xC000;
-                if ((ram_banks & 0x08) != 0 && ram_size < 0x8000)
-                    ram_size = 0x8000;
-                if ((ram_banks & 0x04) != 0 && ram_size < 0x6000)
-                    ram_size = 0x6000;
-                if ((ram_banks & 0x02) != 0 && ram_size < 0x4000)
-                    ram_size = 0x4000;
-
+                // allocate max RAM size based on highest RAM address even though all memory may not be present
+                var ram_size = 0xC000;
                 ram = new byte[ram_size];
                 for (int i = 0; i < ram_size; ++i)
                     ram[i] = 0;
