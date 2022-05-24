@@ -68,6 +68,6 @@ CREDITS:
 * Commodore ROMs from [VICE](https://vice-emu.sourceforge.io/) or [Zimmers.net](http://www.zimmers.net/anonftp/pub/cbm/firmware/computers/c64/) or other
 * Inspired by [mist64/cbmbasic](https://github.com/mist64/cbmbasic)
 * Inspired by [Retroshield 6502](http://www.8bitforce.com/projects/retroshield)
-* Built with Microsoft Visual Studio 2017, .NET Framework 4, C#
+* Built with Microsoft Visual Studio or Visual Code, .NET Framework 4, C#
 
 Read the blog Entry at [davevw.com](https://techwithdave.davevw.com/2020/03/simple-emu-c64.html)
