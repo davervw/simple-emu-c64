@@ -3,7 +3,7 @@ Here is a simple Commodore (64, 128, PET 2001, VIC-20, Commodore 16, Plus/4, ...
 
 Notable features
 
-* Emulates MOS6502,6510,8502 as appropriate
+* Emulates MOS6502/6510 series processors as appropriate
 * Runs as a Windows Console Program (source is C#, also ported to C at [c-simple-emu6502-cbm](https://github.com/davervw/c-simple-emu6502-cbm))
 * Text based Commodore BASIC and 6502 Assembly/Machine Code programs supported
 * only a few hooks: CHRIN-$FFCF/CHROUT-$FFD2/COLOR-$D021/199/646 (COLOR background/inverse $9001 on VIC-20)
@@ -25,8 +25,8 @@ USAGE:
     simple-emu-c64 c64 ram 4
     simple-emu-c64 c64
     simple-emu-c64 c64 startup.prg
-	simple-emu-c64 c64 walk
-	simple-emu-c64 c64 walk FFD2
+    simple-emu-c64 c64 walk
+    simple-emu-c64 c64 walk FFD2
     simple-emu-c64 vic20
     simple-emu-c64 vic20 ram 7
     simple-emu-c64 vic20 ram 28
@@ -55,6 +55,7 @@ LIMITATIONS:
 * No cartridge, no joystick, no paddles, no light pen, no IEC, no serial port, no cassette, no sound, no sprites.
 * No Z80 support.  Only 6502 compatible.
 * Lightly tested.  Bugs are lurking! 
+* No undocumented opcodes.
 
 CREDITS:
 
