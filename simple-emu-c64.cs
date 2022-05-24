@@ -111,9 +111,7 @@ namespace simple_emu_c64
                 error = true;
             }
 
-            if (error)
-                return;
-            else if (args.Length == 0) // if no arguments present, then show usage as well
+            if (args.Length == 0 || error) // if no arguments present, then show usage as well
             {
                 Console.Error.WriteLine("");
                 Console.Error.WriteLine("Usage:");
@@ -124,6 +122,8 @@ namespace simple_emu_c64
                 Console.Error.WriteLine("");
                 Console.WriteLine();
             }
+            if (error)
+                return;
 
             if (args.Length >= 2 && args[1].ToLower() == "walk")
             {
