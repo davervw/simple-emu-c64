@@ -88,7 +88,14 @@ namespace simple_emu_c64
                 for (int i = 0; i < args.Length; ++i)
                 {
                     if (model == CBMmodel.invalid && Enum.TryParse(args[i], ignoreCase: true, out model))
+                    {
+                        if (model == CBMmodel.invalid)
+                        {
+                            error = true;
+                            break;
+                        }
                         continue;
+                    }
                     if (keyword == Keyword.unspecified && Enum.TryParse(args[i], ignoreCase: true, out keyword))
                     {
                         if (keyword == Keyword.walk)
