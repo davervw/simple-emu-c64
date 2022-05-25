@@ -66,11 +66,25 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-//-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//uncomment for Commodore foreground, background colors and reverse emulation
-//#define CBM_COLOR
-//Warning: Default light blue on blue doesn't look good with default color palette for Windows console
-//-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// This is my personal choice on customizing Windows console color pallete.  You are free to choose your own.
+// Listed in left to right order for Console + Properites + Colors
+//
+//   0,   0,   0 - ConsoleColor.Black
+//  32,  32, 128 - ConsoleColor.DarkBlue
+//  32,  96,  32 - ConsoleColor.DarkGreen
+//  64,  64,  64 - ConsoleColor.DarkCyan (aka Dark Gray)
+//  96,  64,   0 - ConsoleColor.DarkYellow (aka Brown)
+// 128, 128, 128 - ConsoleColor.DarkMagenta
+// 180,  90,   0 - ConsoleColor.Magenta (aka Orange)
+// 128, 128, 128 - ConsoleColor.Gray (aka Light Gray)
+//  96,  96,  96 - ConsoleColor.DarkGray (aka Medium Gray)
+//  64,  64, 255 - ConsoleColor.Blue (aka Light Blue)
+// 128, 192, 128 - ConsoleColor.Green (aka Light Green)
+//   0, 255, 255 - ConsoleColor.Cyan
+// 128,   0,   0 - ConsoleColor.DarkRed (aka Red)
+// 240, 128, 128 - ConsoleColor.Red (aka Pink)
+// 224, 224, 224 - ConsoleColor.Yellow
+// 255, 255, 255 - ConsoleColor.White
 
 using System;
 using System.IO;
@@ -403,30 +417,33 @@ namespace simple_emu_c64
             public void ApplyColor()
             {
                 bool reverse = (this[199] != 0);
-                
-#if CBM_COLOR
-                if (reverse)
+
+                if (CBM_Console.Color)
                 {
-                    Console.BackgroundColor = ToConsoleColor(this[646]);
-                    Console.ForegroundColor = ToConsoleColor(this[0xD021]);
+                    if (reverse)
+                    {
+                        Console.BackgroundColor = ToConsoleColor(this[646]);
+                        Console.ForegroundColor = ToConsoleColor(this[0xD021]);
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ToConsoleColor(this[646]);
+                        Console.BackgroundColor = ToConsoleColor(this[0xD021]);
+                    }
                 }
                 else
                 {
-                    Console.ForegroundColor = ToConsoleColor(this[646]);
-                    Console.BackgroundColor = ToConsoleColor(this[0xD021]);
+                    if (reverse)
+                    {
+                        Console.BackgroundColor = startup_fg;
+                        Console.ForegroundColor = startup_bg;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = startup_fg;
+                        Console.BackgroundColor = startup_bg;
+                    }
                 }
-#else
-                if (reverse)
-                {
-                    Console.BackgroundColor = startup_fg;
-                    Console.ForegroundColor = startup_bg;
-                }
-                else
-                {
-                    Console.ForegroundColor = startup_fg;
-                    Console.BackgroundColor = startup_bg;
-                }
-#endif
             }
 
             private ConsoleColor ToConsoleColor(byte CommodoreColor)

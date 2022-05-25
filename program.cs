@@ -116,6 +116,11 @@ namespace simple_emu_c64
                         encodingSpecified = true;
                         continue;
                     }
+                    if (!CBM_Console.Color && string.Compare(args[i], "color", ignoreCase: true) == 0)
+                    {
+                        CBM_Console.Color = true;
+                        continue;
+                    }
                     if (File.Exists(args[i]) || File.Exists(args[i] + ".PRG"))
                     {
                         startupPRG = args[i];

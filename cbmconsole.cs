@@ -69,6 +69,10 @@ namespace simple_emu_c64
             }
         }
 
+        public static bool Color { get; set; }
+        //Warning: Default light blue on blue doesn't look good with default color palette for Windows console
+        //You can manually modify color pallette in Windows
+
         public static void WriteChar(char c, bool supress_next_home=false)
         {
             // we're emulating, so draw character on local console window

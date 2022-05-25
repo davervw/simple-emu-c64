@@ -70,11 +70,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-//-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//uncomment for Commodore foreground, background colors and reverse emulation
-//#define CBM_COLOR
-//-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
 using System;
 using System.IO;
 using System.Text;
@@ -396,30 +391,33 @@ namespace simple_emu_c64
             public void ApplyColor()
             {
                 bool reverse = (this[243] != 0);
-                
-#if CBM_COLOR
-                if (reverse)
+
+                if (CBM_Console.Color)
                 {
-                    Console.BackgroundColor = ToConsoleColor(this[241]);
-                    Console.ForegroundColor = ToConsoleColor(this[0xD021]);
+                    if (reverse)
+                    {
+                        Console.BackgroundColor = ToConsoleColor(this[241]);
+                        Console.ForegroundColor = ToConsoleColor(this[0xD021]);
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ToConsoleColor(this[241]);
+                        Console.BackgroundColor = ToConsoleColor(this[0xD021]);
+                    }
                 }
                 else
                 {
-                    Console.ForegroundColor = ToConsoleColor(this[241]);
-                    Console.BackgroundColor = ToConsoleColor(this[0xD021]);
+                    if (reverse)
+                    {
+                        Console.BackgroundColor = startup_fg;
+                        Console.ForegroundColor = startup_bg;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = startup_fg;
+                        Console.BackgroundColor = startup_bg;
+                    }
                 }
-#else
-                if (reverse)
-                {
-                    Console.BackgroundColor = startup_fg;
-                    Console.ForegroundColor = startup_bg;
-                }
-                else
-                {
-                    Console.ForegroundColor = startup_fg;
-                    Console.BackgroundColor = startup_bg;
-                }
-#endif
             }
 
             private ConsoleColor ToConsoleColor(byte CommodoreColor)

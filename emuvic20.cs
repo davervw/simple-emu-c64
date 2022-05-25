@@ -62,11 +62,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-//-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//uncomment for Commodore foreground, background colors and reverse emulation
-#define CBM_COLOR
-//-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
 using System;
 using System.IO;
 
@@ -356,30 +351,33 @@ namespace simple_emu_c64
 
             private void ApplyColor()
             {
-                bool reverse =  (this[199] != 0) ^ ((this[0x900F] & 0x8) == 1);
-#if CBM_COLOR
-                if (reverse)
+                bool reverse = (this[199] != 0) ^ ((this[0x900F] & 0x8) == 1);
+                if (CBM_Console.Color)
                 {
-                    Console.ForegroundColor = ToConsoleColor(this[0x900F] >> 4);
-                    Console.BackgroundColor = ToConsoleColor(this[646]);
+                    if (reverse)
+                    {
+                        Console.ForegroundColor = ToConsoleColor(this[0x900F] >> 4);
+                        Console.BackgroundColor = ToConsoleColor(this[646]);
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ToConsoleColor(this[646]);
+                        Console.BackgroundColor = ToConsoleColor(this[0x900F] >> 4);
+                    }
                 }
                 else
                 {
-                    Console.ForegroundColor = ToConsoleColor(this[646]);
-                    Console.BackgroundColor = ToConsoleColor(this[0x900F] >> 4);
+                    if (reverse)
+                    {
+                        Console.BackgroundColor = startup_fg;
+                        Console.ForegroundColor = startup_bg;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = startup_fg;
+                        Console.BackgroundColor = startup_bg;
+                    }
                 }
-#else
-                if (reverse)
-                {
-                    Console.BackgroundColor = startup_fg;
-                    Console.ForegroundColor = startup_bg;
-                }
-                else
-                {
-                    Console.ForegroundColor = startup_fg;
-                    Console.BackgroundColor = startup_bg;
-                }
-#endif
             }
         }
     }
