@@ -42,6 +42,33 @@ namespace simple_emu_c64
         static bool supress_next_cr = false;
         static List<char> buffer = new List<char>();
 
+        public enum CBMEncoding
+        {
+            ascii = 0,
+            //ansi = 1,
+            //unicode = 2,
+            petscii = 3,
+        }
+
+        private static CBMEncoding encoding;
+
+        public static CBMEncoding Encoding
+        {
+            get
+            {
+                return encoding;
+            }
+
+            set
+            {
+                encoding = value;
+                if (encoding == CBMEncoding.ascii)
+                    Console.OutputEncoding = System.Text.Encoding.ASCII;
+                else if (encoding == CBMEncoding.petscii)
+                    Console.OutputEncoding = System.Text.Encoding.UTF8;
+            }
+        }
+
         public static void WriteChar(char c, bool supress_next_home=false)
         {
             // we're emulating, so draw character on local console window
@@ -54,6 +81,18 @@ namespace simple_emu_c64
             }
             else if (c >= ' ' && c <= '~')
             {
+                if (encoding == CBMEncoding.petscii)
+                {
+                    if (c == '\\')
+                        c = '£';
+                    else if (c == '^')
+                        c = '↑';
+                    else if (c == '_')
+                        c = '←';
+                    else if (c == '\x7E')
+                        c = 'π';
+                }
+                //System.Diagnostics.Debug.WriteLine($"Printable {(ulong)c:X8}");
                 Console.Write(c);
             }
             else if (c == 157) // left
@@ -110,8 +149,40 @@ namespace simple_emu_c64
                     // ignore exception, e.g. not a console
                 }
             }
+            else if (encoding == CBMEncoding.petscii && (c == 255 || c == 0xDE))
+                Console.Write('π');
             else
             {
+                if (encoding == CBMEncoding.petscii)
+                {
+                    if (c == '\xA0' || c == '\xE0') // alternate space
+                        c = '\u00A0'; // no-break space
+                    else if (c == '\xB0') // nw box line corner
+                        c = '\u250c';
+                    else if (c == '\xAE') // ne box line corner
+                        c = '\u2510';
+                    else if (c == '\xAD') // sw box line corner
+                        c = '\u2514';
+                    else if (c == '\xBD') // se box line corner
+                        c = '\u2518';
+                    else if (c == '\xAC' || c == '\xEC') // se graphic box
+                        c = '\u2597';
+                    else if (c == '\xBB' || c == '\xFB') // sw graphic box
+                        c = '\u2596';
+                    else if (c == '\xBC' || c == '\xFC') // ne graphic box
+                        c = '\u259d';
+                    else if (c == '\xBE' || c == '\xFE') // nw graphic box
+                        c = '\u2598';
+                    else if (c == '\xBF') // nwse diagonal graphic box
+                        c = '\u259A';
+                    else if (c == '\xA2' || c == '\xE2') // lower half graphic box
+                        c = '\u2584';
+                    else if (c == '\xA1' || c == '\xE1') // left half graphic box
+                        c = '\u258C';
+                    else
+                        return;
+                    Console.Write(c);
+                }
                 //System.Diagnostics.Debug.WriteLine(string.Format("Unprintable {0:X2}", (int)c));
             }
 
@@ -131,6 +202,29 @@ namespace simple_emu_c64
                 supress_next_cr = true;
             }
             char c = buffer[0];
+            if (encoding == CBMEncoding.petscii)
+            {
+                if (c == 'π')
+                    c = '\xff';
+                else if (c == '£')
+                    c = '\\';
+                else if (c == '↑' || c == '\u0018')
+                    c = '^';
+                else if (c == '←' || c == '\u001b')
+                    c = '_';
+                else if (c == '\u00A0') // no-break space
+                    c = '\xA0'; // alternate space
+                else if (c == '\u250c' || c == '\u250f')
+                    c = '\xB0'; // nw box line corner
+                else if (c == '\u2510' || c == '\u2513')
+                    c = '\xAE'; // ne box line corner
+                else if (c == '\u2514' || c == '\u2517')
+                    c = '\xAD'; // sw box line corner
+                else if (c == '\u2518' || c == '\u251b')
+                    c = '\xBD'; // se box line corner
+                //else if (c > '\xff')
+                //    System.Diagnostics.Debug.WriteLine($"Received unicode {(ulong)c}");
+            }
             buffer.RemoveAt(0);
             return (byte)c;
         }

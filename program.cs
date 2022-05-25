@@ -33,7 +33,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
 
 namespace simple_emu_c64
@@ -72,6 +71,8 @@ namespace simple_emu_c64
             var keyword = Keyword.unspecified;
             var walkAddrs = new List<ushort>();
             var startupPRG = null as string;
+            var encodingSpecified = false;
+            CBM_Console.CBMEncoding encoding = CBM_Console.CBMEncoding.ascii;
 
             Console.Error.WriteLine("6502 Emulator for Windows Console");
             Console.Error.WriteLine("C64, VIC-20, PET, TED, C128, ...");
@@ -109,6 +110,11 @@ namespace simple_emu_c64
                             ram_size = int.Parse(args[++i]) * 1024;
                             continue;
                         }
+                    }
+                    if (!encodingSpecified && Enum.TryParse(args[i], ignoreCase: true, out encoding))
+                    {
+                        encodingSpecified = true;
+                        continue;
                     }
                     if (File.Exists(args[i]) || File.Exists(args[i] + ".PRG"))
                     {
@@ -169,6 +175,9 @@ namespace simple_emu_c64
             {
                 cbm = new EmuC128(basic_lo_file: $"c128{Path.DirectorySeparatorChar}basiclo", basic_hi_file: $"c128{Path.DirectorySeparatorChar}basichi", chargen_file: $"c128{Path.DirectorySeparatorChar}chargen", kernal_file: $"c128{Path.DirectorySeparatorChar}kernal");
             }
+
+            if (cbm != null && encodingSpecified)
+                CBM_Console.Encoding = encoding;
 
             if (args.Length == 0 || error || keyword == Keyword.help) // if no arguments present, then show usage as well
             {
