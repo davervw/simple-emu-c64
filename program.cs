@@ -77,7 +77,7 @@ namespace simple_emu_c64
             Console.Error.WriteLine("6502 Emulator for Windows Console");
             Console.Error.WriteLine("C64, VIC-20, PET, TED, C128, ...");
             Console.Error.WriteLine("");
-            Console.Error.WriteLine("simple-emu-c64 version 1.8.6");
+            Console.Error.WriteLine("simple-emu-c64 version 1.8.7");
             Console.Error.WriteLine("Copyright (c) 2022 David R. Van Wagner");
             Console.Error.WriteLine("davevw.com");
             Console.Error.WriteLine("Open Source, MIT License");
