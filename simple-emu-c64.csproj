@@ -45,7 +45,7 @@
     <Compile Include="emupet.cs" />
     <Compile Include="emuvic20.cs" />
     <Compile Include="cbmconsole.cs" />
-    <Compile Include="simple-emu-c64.cs" />
+    <Compile Include="program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="walk6502.cs" />
   </ItemGroup>

@@ -7,9 +7,9 @@
 //
 // MIT License
 //
-// Copyright(c) 2020 by David R.Van Wagner
+// Copyright (c) 2020-2022 by David R.Van Wagner
 // davevw.com
-//
+// 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 //
 // of this software and associated documentation files (the "Software"), to deal
@@ -51,7 +51,7 @@ namespace simple_emu_c64
             Console.Error.WriteLine("C64, VIC-20, PET, TED, C128, ...");
             Console.Error.WriteLine("");
             Console.Error.WriteLine("simple-emu-c64 version 1.8.4");
-            Console.Error.WriteLine("Copyright (c) 2020-2022 David R. Van Wagner");
+            Console.Error.WriteLine("Copyright (c) 2022 David R. Van Wagner");
             Console.Error.WriteLine("davevw.com");
             Console.Error.WriteLine("Open Source, MIT License");
             Console.Error.WriteLine("github.com/davervw/simple-emu-c64");

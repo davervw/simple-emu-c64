@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("simple-emu-c64")]
-[assembly: AssemblyCopyright("Copyright © 2020 David R. Van Wagner")]
+[assembly: AssemblyCopyright("Copyright © 2022 David R. Van Wagner")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
