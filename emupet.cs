@@ -68,8 +68,16 @@ namespace simple_emu_c64
     {
         public EmuPET(int ram_size, string basic_file, string edit_file, string kernal_file) : base(new PETMemory(ram_size, basic_file, edit_file, kernal_file))
         {
-            Console.BackgroundColor = startup_bg;
-            Console.ForegroundColor = startup_fg;
+            if (CBM_Console.Color)
+            {
+                Console.BackgroundColor = ConsoleColor.Black;
+                Console.ForegroundColor = ConsoleColor.Green;
+            }
+            else
+            {
+                Console.BackgroundColor = startup_bg;
+                Console.ForegroundColor = startup_fg;
+            }
         }
 
         int startup_state = 0;
@@ -316,11 +324,46 @@ namespace simple_emu_c64
                 set
                 {
                     if (addr < ram.Length)
+                    {
                         ram[addr] = value;
+                        if (addr == 526)
+                            ApplyColor();
+                    }
                     else if (addr >= video_addr && addr < video_addr + video_size)
                         video_ram[addr - video_addr] = value;
                     else if (addr >= io_addr && addr < io_addr + io_size)
                         io[addr - io_addr] = value;
+                }
+            }
+
+            private void ApplyColor()
+            {
+                bool reverse = (this[526] == 18);
+                if (CBM_Console.Color)
+                {
+                    if (reverse)
+                    {
+                        Console.BackgroundColor = ConsoleColor.Green;
+                        Console.ForegroundColor = ConsoleColor.Black;
+                    }
+                    else
+                    {
+                        Console.BackgroundColor = ConsoleColor.Black;
+                        Console.ForegroundColor = ConsoleColor.Green;
+                    }
+                }
+                else
+                {
+                    if (reverse)
+                    {
+                        Console.BackgroundColor = startup_fg;
+                        Console.ForegroundColor = startup_bg;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = startup_fg;
+                        Console.BackgroundColor = startup_bg;
+                    }
                 }
             }
         }
