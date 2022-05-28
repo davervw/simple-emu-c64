@@ -78,6 +78,45 @@ namespace simple_emu_c64
             {
                 for (int i = 0; i < args.Length; ++i)
                 {
+                    if (args[i].Length == 0)
+                    {
+                        error = true;
+                        continue;
+                    }
+                    if (int.TryParse(args[i], out _))
+                    {
+                        if (model != CBMmodel.invalid)
+                        {
+                            error = true;
+                            continue;
+                        }
+                        var valueModel = int.Parse(args[i]);
+                        switch (valueModel)
+                        {
+                            case 4:
+                                model = CBMmodel.plus4;
+                                break;
+                            case 16:
+                                model = CBMmodel.c16;
+                                break;
+                            case 20:
+                                model = CBMmodel.vic20;
+                                break;
+                            case 64:
+                                model = CBMmodel.c64;
+                                break;
+                            case 128:
+                                model = CBMmodel.c128;
+                                break;
+                            case 2001:
+                                model = CBMmodel.pet;
+                                break;
+                            default:
+                                error = true;
+                                break;
+                        }
+                        continue;
+                    }
                     if (model == CBMmodel.invalid && Enum.TryParse(args[i], ignoreCase: true, out model))
                     {
                         if (model == CBMmodel.invalid)
