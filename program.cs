@@ -74,16 +74,6 @@ namespace simple_emu_c64
             var encodingSpecified = false;
             CBM_Console.CBMEncoding encoding = CBM_Console.CBMEncoding.ascii;
 
-            Console.Error.WriteLine("6502 Emulator for Windows Console");
-            Console.Error.WriteLine("C64, VIC-20, PET, TED, C128, ...");
-            Console.Error.WriteLine("");
-            Console.Error.WriteLine("simple-emu-c64 version 1.8.7");
-            Console.Error.WriteLine("Copyright (c) 2022 David R. Van Wagner");
-            Console.Error.WriteLine("davevw.com");
-            Console.Error.WriteLine("Open Source, MIT License");
-            Console.Error.WriteLine("github.com/davervw/simple-emu-c64");
-            Console.Error.WriteLine("");
-
             try
             {
                 for (int i = 0; i < args.Length; ++i)
@@ -156,6 +146,12 @@ namespace simple_emu_c64
             }
             else if (model == CBMmodel.c16)
             {
+                if (CBM_Console.Color)
+                {
+                    Console.BackgroundColor = ConsoleColor.White;
+                    Console.ForegroundColor = ConsoleColor.Black;
+                    Console.Clear();
+                }
                 if (ram_size == 0)
                     ram_size = 16 * 1024;
                 cbm = new EmuTED(ram_size: ram_size, basic_file: $"ted{Path.DirectorySeparatorChar}basic", kernal_file: $"ted{Path.DirectorySeparatorChar}kernal");
@@ -164,6 +160,12 @@ namespace simple_emu_c64
             }
             else if (model == CBMmodel.plus4 || model == CBMmodel.ted)
             {
+                if (CBM_Console.Color)
+                {
+                    Console.BackgroundColor = ConsoleColor.White;
+                    Console.ForegroundColor = ConsoleColor.Black;
+                    Console.Clear();
+                }
                 if (ram_size == 0)
                     ram_size = 64 * 1024;
                 cbm = new EmuTED(ram_size: ram_size, basic_file: $"ted{Path.DirectorySeparatorChar}basic", kernal_file: $"ted{Path.DirectorySeparatorChar}kernal");
@@ -172,6 +174,12 @@ namespace simple_emu_c64
             }
             else if (model == CBMmodel.pet)
             {
+                if (CBM_Console.Color)
+                {
+                    Console.BackgroundColor = ConsoleColor.Black;
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.Clear();
+                }
                 if (ram_size == 0)
                     ram_size = 8 * 1024;
                 cbm = new EmuPET(ram_size: ram_size, basic_file: $"pet{Path.DirectorySeparatorChar}basic1", edit_file: $"pet{Path.DirectorySeparatorChar}edit1g", kernal_file: $"pet{Path.DirectorySeparatorChar}kernal1");
@@ -183,6 +191,16 @@ namespace simple_emu_c64
 
             if (cbm != null && encodingSpecified)
                 CBM_Console.Encoding = encoding;
+
+            Console.Error.WriteLine("6502 Emulator for Windows Console");
+            Console.Error.WriteLine("C64, VIC-20, PET, TED, C128, ...");
+            Console.Error.WriteLine("");
+            Console.Error.WriteLine("simple-emu-c64 version 1.8.7");
+            Console.Error.WriteLine("Copyright (c) 2022 David R. Van Wagner");
+            Console.Error.WriteLine("davevw.com");
+            Console.Error.WriteLine("Open Source, MIT License");
+            Console.Error.WriteLine("github.com/davervw/simple-emu-c64");
+            Console.Error.WriteLine("");
 
             if (args.Length == 0 || error || keyword == Keyword.help) // if no arguments present, then show usage as well
             {
@@ -246,7 +264,12 @@ namespace simple_emu_c64
                 try
                 {
                     if (go_num == 2001)
+                    {
+                        Console.BackgroundColor = ConsoleColor.Black;
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.Clear();
                         cbm = new EmuPET(ram_size: ram_size, basic_file: $"pet{Path.DirectorySeparatorChar}basic1", edit_file: $"pet{Path.DirectorySeparatorChar}edit1g", kernal_file: $"pet{Path.DirectorySeparatorChar}kernal1");
+                    }
                     else if (go_num == 20)
                         cbm = new EmuVIC20(ram_size: ram_size, char_file: $"vic20{Path.DirectorySeparatorChar}chargen", basic_file: $"vic20{Path.DirectorySeparatorChar}basic", kernal_file: $"vic20{Path.DirectorySeparatorChar}kernal");
                     else if (go_num == 128)

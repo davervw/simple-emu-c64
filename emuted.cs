@@ -74,12 +74,7 @@ namespace simple_emu_c64
     {
         public EmuTED(int ram_size, string basic_file, string kernal_file) : base(new TEDMemory(ram_size, basic_file, kernal_file))
         {
-            if (CBM_Console.Color)
-            {
-                Console.BackgroundColor = ConsoleColor.White;
-                Console.ForegroundColor = ConsoleColor.Black;
-            }
-            else
+            if (!CBM_Console.Color)
             {
                 Console.BackgroundColor = startup_bg;
                 Console.ForegroundColor = startup_fg;
