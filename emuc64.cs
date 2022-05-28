@@ -69,7 +69,7 @@
 //Changing Windows console colors is known to more closely replicate the Commodore experience
 //(you may vary to your preferences)
 //Listed in left to right order for Console + System Menu + Properites + Colors
-//
+
 //   0,   0,   0 - ConsoleColor.Black
 //  32,  32, 128 - ConsoleColor.DarkBlue
 //  32,  96,  32 - ConsoleColor.DarkGreen
@@ -84,7 +84,7 @@
 //   0, 255, 255 - ConsoleColor.Cyan
 // 128,   0,   0 - ConsoleColor.Red
 // 240, 128, 128 - ConsoleColor.Magenta(aka Pink)
-// 224, 224, 224 - ConsoleColor.Yellow
+// 224, 224,   0 - ConsoleColor.Yellow
 // 255, 255, 255 - ConsoleColor.White
 
 //For returning to defaults, note that Windows colors default to
