@@ -74,8 +74,16 @@ namespace simple_emu_c64
     {
         public EmuTED(int ram_size, string basic_file, string kernal_file) : base(new TEDMemory(ram_size, basic_file, kernal_file))
         {
-            Console.BackgroundColor = startup_bg;
-            Console.ForegroundColor = startup_fg;
+            if (CBM_Console.Color)
+            {
+                Console.BackgroundColor = ConsoleColor.White;
+                Console.ForegroundColor = ConsoleColor.Black;
+            }
+            else
+            {
+                Console.BackgroundColor = startup_bg;
+                Console.ForegroundColor = startup_fg;
+            }
         }
 
         private int startup_state = 0;
@@ -287,11 +295,15 @@ namespace simple_emu_c64
                     else if (addr >= config_addr && addr < config_addr + config_len)
                         rom_config = addr & 0xF;
                     else if (addr >= io_addr && addr < io_addr + io.Length)
+                    {
                         io[addr - io_addr] = value;
+                        if (addr == 65301)
+                            ApplyColor();
+                    }
                     else
-                    { 
+                    {
                         ram[addr & (ram.Length - 1)] = value; // includes writing under rom, note RAM wraps around when less than 64K
-                        if (addr == 194)
+                        if (addr == 194 || addr == 1339)
                             ApplyColor();
                     }
                 }
@@ -300,15 +312,106 @@ namespace simple_emu_c64
             private void ApplyColor()
             {
                 bool reverse = (this[194] != 0);
-                if (reverse)
+                if (CBM_Console.Color)
                 {
-                    Console.BackgroundColor = startup_fg;
-                    Console.ForegroundColor = startup_bg;
+                    var bg_register = io[65301-io_addr];
+                    var bg_color = (TedColor)(bg_register & 0xF);
+                    var bg_luminance = (bg_register >> 4) & 7;
+                    var fg_color = (TedColor)(ram[1339] & 0xF);
+                    var fg_luminance = (ram[1339] >> 4) & 7;
+
+                    if (reverse)
+                    {
+                        Console.BackgroundColor = ConvertToConsoleColor(fg_color, fg_luminance);
+                        Console.ForegroundColor = ConvertToConsoleColor(bg_color, bg_luminance);
+                    }
+                    else
+                    {
+                        Console.BackgroundColor = ConvertToConsoleColor(bg_color, bg_luminance);
+                        Console.ForegroundColor = ConvertToConsoleColor(fg_color, fg_luminance);
+                    }
                 }
                 else
                 {
-                    Console.ForegroundColor = startup_fg;
-                    Console.BackgroundColor = startup_bg;
+                    if (reverse)
+                    {
+                        Console.BackgroundColor = startup_fg;
+                        Console.ForegroundColor = startup_bg;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = startup_fg;
+                        Console.BackgroundColor = startup_bg;
+                    }
+                }
+            }
+
+            enum TedColor
+            {
+                Black = 0,
+                Gray = 1,
+                White = 1,
+                Red = 2,
+                Cyan = 3,
+                Magenta = 4,
+                Green = 5,
+                Blue = 6,
+                Yellow = 7,
+                Orange = 8,
+                Brown = 9,
+                YellowGreen = 10,
+                Pink = 11,
+                BlueGreen = 12,
+                LightBlue = 13,
+                Purple = 14,
+                LightGreen = 15
+            }
+
+            ConsoleColor ConvertToConsoleColor(TedColor color, int luminance)
+            {
+                switch (color)
+                {
+                    case TedColor.Black:
+                        return ConsoleColor.Black;
+                    case TedColor.Gray:
+                        if (luminance < 2)
+                            return ConsoleColor.DarkCyan;
+                        else if (luminance < 4)
+                            return ConsoleColor.DarkGray;
+                        else if (luminance < 7)
+                            return ConsoleColor.Gray;
+                        else
+                            return ConsoleColor.White;
+                    case TedColor.Red:
+                        return ConsoleColor.Red;
+                    case TedColor.Cyan:
+                        return ConsoleColor.Cyan;
+                    case TedColor.Magenta:
+                        return ConsoleColor.DarkMagenta;
+                    case TedColor.Green:
+                        return ConsoleColor.DarkGreen;
+                    case TedColor.Blue:
+                        return ConsoleColor.DarkBlue;
+                    case TedColor.Yellow:
+                        return ConsoleColor.Yellow;
+                    case TedColor.Orange:
+                        return ConsoleColor.DarkYellow;
+                    case TedColor.Brown:
+                        return ConsoleColor.DarkRed;
+                    case TedColor.YellowGreen:
+                        return ConsoleColor.Green;
+                    case TedColor.Pink:
+                        return ConsoleColor.Magenta;
+                    case TedColor.BlueGreen:
+                        return ConsoleColor.DarkGreen;
+                    case TedColor.LightBlue:
+                        return ConsoleColor.Blue;
+                    case TedColor.Purple:
+                        return ConsoleColor.DarkMagenta;
+                    case TedColor.LightGreen:
+                        return ConsoleColor.Green;
+                    default:
+                        return ConsoleColor.Black;
                 }
             }
         }
