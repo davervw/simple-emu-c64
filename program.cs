@@ -170,6 +170,12 @@ namespace simple_emu_c64
 
             if (model == CBMmodel.c64)
             {
+                if (CBM_Console.Color)
+                {
+                    Console.BackgroundColor = ConsoleColor.DarkBlue;
+                    Console.ForegroundColor = ConsoleColor.Blue;
+                    Console.Clear();
+                }
                 if (ram_size == 0)
                     ram_size = 64 * 1024;
                 if (File.Exists("basic") && File.Exists("kernal") && (!File.Exists($"c64{Path.DirectorySeparatorChar}basic") || !File.Exists($"c64{Path.DirectorySeparatorChar}kernal")))
@@ -181,6 +187,12 @@ namespace simple_emu_c64
             }
             else if (model == CBMmodel.vic20)
             {
+                if (CBM_Console.Color)
+                {
+                    Console.BackgroundColor = ConsoleColor.White;
+                    Console.ForegroundColor = ConsoleColor.DarkBlue;
+                    Console.Clear();
+                }
                 cbm = new EmuVIC20(ram_size: ram_size, char_file: $"vic20{Path.DirectorySeparatorChar}chargen", basic_file: $"vic20{Path.DirectorySeparatorChar}basic", kernal_file: $"vic20{Path.DirectorySeparatorChar}kernal");
             }
             else if (model == CBMmodel.c16)
@@ -225,6 +237,12 @@ namespace simple_emu_c64
             }
             else if (model == CBMmodel.c128)
             {
+                if (CBM_Console.Color)
+                {
+                    Console.BackgroundColor = ConsoleColor.DarkCyan;
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.Clear();
+                }
                 cbm = new EmuC128(basic_lo_file: $"c128{Path.DirectorySeparatorChar}basiclo", basic_hi_file: $"c128{Path.DirectorySeparatorChar}basichi", chargen_file: $"c128{Path.DirectorySeparatorChar}chargen", kernal_file: $"c128{Path.DirectorySeparatorChar}kernal");
             }
 
@@ -302,7 +320,7 @@ namespace simple_emu_c64
                 ram_size = (int)(ram_kilobytes * 1024);
                 try
                 {
-                    if (go_num == 2001)
+                    if (go_num == 2001 && CBM_Console.Color)
                     {
                         Console.BackgroundColor = ConsoleColor.Black;
                         Console.ForegroundColor = ConsoleColor.Green;
