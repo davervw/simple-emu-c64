@@ -66,24 +66,43 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-// This is my personal choice on customizing Windows console color pallete.  You are free to choose your own.
-// Listed in left to right order for Console + Properites + Colors
+//Changing Windows console colors is known to more closely replicate the Commodore experience
+//(you may vary to your preferences)
+//Listed in left to right order for Console + System Menu + Properites + Colors
 //
 //   0,   0,   0 - ConsoleColor.Black
 //  32,  32, 128 - ConsoleColor.DarkBlue
 //  32,  96,  32 - ConsoleColor.DarkGreen
-//  64,  64,  64 - ConsoleColor.DarkCyan (aka Dark Gray)
-//  96,  64,   0 - ConsoleColor.DarkYellow (aka Brown)
-// 128, 128, 128 - ConsoleColor.DarkMagenta
-// 180,  90,   0 - ConsoleColor.Magenta (aka Orange)
-// 128, 128, 128 - ConsoleColor.Gray (aka Light Gray)
-//  96,  96,  96 - ConsoleColor.DarkGray (aka Medium Gray)
-//  64,  64, 255 - ConsoleColor.Blue (aka Light Blue)
-// 128, 192, 128 - ConsoleColor.Green (aka Light Green)
+//  64,  64,  64 - ConsoleColor.DarkCyan(aka Dark Gray)
+//  96,  64,   0 - ConsoleColor.DarkRed(aka Brown)
+// 128,   0, 128 - ConsoleColor.DarkMagenta
+// 180,  90,   0 - ConsoleColor.DarkYellow(aka Orange)
+// 128, 128, 128 - ConsoleColor.Gray(aka Light Gray)
+//  96,  96,  96 - ConsoleColor.DarkGray(aka Medium Gray)
+//  64,  64, 255 - ConsoleColor.Blue(aka Light Blue)
+// 128, 192, 128 - ConsoleColor.Green(aka Light Green)
 //   0, 255, 255 - ConsoleColor.Cyan
-// 128,   0,   0 - ConsoleColor.DarkRed (aka Red)
-// 240, 128, 128 - ConsoleColor.Red (aka Pink)
+// 128,   0,   0 - ConsoleColor.Red
+// 240, 128, 128 - ConsoleColor.Magenta(aka Pink)
 // 224, 224, 224 - ConsoleColor.Yellow
+// 255, 255, 255 - ConsoleColor.White
+
+//For returning to defaults, note that Windows colors default to
+//   0,   0,   0 - ConsoleColor.Black
+//   0,   0, 128 - ConsoleColor.DarkBlue
+//   0, 128,   0 - ConsoleColor.DarkGreen
+//   0, 128, 128 - ConsoleColor.DarkCyan
+// 128,   0,   0 - ConsoleColor.DarkRed
+// 128,   0, 128 - ConsoleColor.DarkMagenta
+// 128, 128,   0 - ConsoleColor.DarkYellow
+// 192, 192, 192 - ConsoleColor.Gray
+// 128, 128, 128 - ConsoleColor.DarkGray
+//   0,   0, 255 - ConsoleColor.Blue
+//   0, 255,   0 - ConsoleColor.Green
+//   0, 255, 255 - ConsoleColor.Cyan
+// 255,   0,   0 - ConsoleColor.Red
+// 255,   0, 255 - ConsoleColor.Magenta
+// 255, 255,   0 - ConsoleColor.Yellow
 // 255, 255, 255 - ConsoleColor.White
 
 using System;
@@ -458,14 +477,14 @@ namespace simple_emu_c64
                     case 5: return ConsoleColor.DarkGreen;
                     case 6: return ConsoleColor.DarkBlue;
                     case 7: return ConsoleColor.Yellow;
-                    case 8: return ConsoleColor.DarkYellow;
-                    case 9: return ConsoleColor.DarkRed;
-                    case 10: return ConsoleColor.Magenta;
-                    case 11: return ConsoleColor.DarkCyan;
-                    case 12: return ConsoleColor.DarkGray;
-                    case 13: return ConsoleColor.Green;
-                    case 14: return ConsoleColor.Blue;
-                    case 15: return ConsoleColor.Gray;
+                    case 8: return ConsoleColor.DarkYellow;//Orange
+                    case 9: return ConsoleColor.DarkRed;//Brown
+                    case 10: return ConsoleColor.Magenta;//Pink
+                    case 11: return ConsoleColor.DarkCyan;//Dark Gray
+                    case 12: return ConsoleColor.DarkGray;//Medium Gray
+                    case 13: return ConsoleColor.Green;//Light Green
+                    case 14: return ConsoleColor.Blue;//Light Blue
+                    case 15: return ConsoleColor.Gray;//Light Gray
                     default: throw new InvalidOperationException("Missing case number in ToConsoleColor");
                 }
             }
