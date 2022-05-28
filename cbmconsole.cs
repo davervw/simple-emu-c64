@@ -83,22 +83,32 @@ namespace simple_emu_c64
                 else
                     Console.WriteLine();
             }
-            else if (c >= ' ' && c <= '~')
+            else if (encoding == CBMEncoding.petscii && ((byte)c & 127) >= 32)
             {
-                if (encoding == CBMEncoding.petscii)
+                if (c == '\\')
                 {
-                    if (c == '\\')
-                        c = '£';
-                    else if (c == '^')
-                        c = '↑';
-                    else if (c == '_')
-                        c = '←';
-                    else if (c == '\x7E')
-                        c = 'π';
+                    Console.Write('£');
+                    return;
                 }
-                //System.Diagnostics.Debug.WriteLine($"Printable {(ulong)c:X8}");
-                Console.Write(c);
+                else if (c == '^')
+                {
+                    Console.Write('↑');
+                    return;
+                }
+                else if (c == '_')
+                {
+                    Console.Write('←');
+                    return;
+                }
+                else if (c == '\x7E')
+                {
+                    Console.Write('π');
+                    return;
+                }
+                Console.Write((char)(0xE000 | (byte)c));
             }
+            else if (c >= ' ' && c <= '~')
+                Console.Write(c);
             else if (c == 157) // left
             {
                 if (Console.CursorLeft > 0)
@@ -153,42 +163,6 @@ namespace simple_emu_c64
                     // ignore exception, e.g. not a console
                 }
             }
-            else if (encoding == CBMEncoding.petscii && (c == 255 || c == 0xDE))
-                Console.Write('π');
-            else
-            {
-                if (encoding == CBMEncoding.petscii)
-                {
-                    if (c == '\xA0' || c == '\xE0') // alternate space
-                        c = '\u00A0'; // no-break space
-                    else if (c == '\xB0') // nw box line corner
-                        c = '\u250c';
-                    else if (c == '\xAE') // ne box line corner
-                        c = '\u2510';
-                    else if (c == '\xAD') // sw box line corner
-                        c = '\u2514';
-                    else if (c == '\xBD') // se box line corner
-                        c = '\u2518';
-                    else if (c == '\xAC' || c == '\xEC') // se graphic box
-                        c = '\u2597';
-                    else if (c == '\xBB' || c == '\xFB') // sw graphic box
-                        c = '\u2596';
-                    else if (c == '\xBC' || c == '\xFC') // ne graphic box
-                        c = '\u259d';
-                    else if (c == '\xBE' || c == '\xFE') // nw graphic box
-                        c = '\u2598';
-                    else if (c == '\xBF') // nwse diagonal graphic box
-                        c = '\u259A';
-                    else if (c == '\xA2' || c == '\xE2') // lower half graphic box
-                        c = '\u2584';
-                    else if (c == '\xA1' || c == '\xE1') // left half graphic box
-                        c = '\u258C';
-                    else
-                        return;
-                    Console.Write(c);
-                }
-                //System.Diagnostics.Debug.WriteLine(string.Format("Unprintable {0:X2}", (int)c));
-            }
 
             if (supress_next_home)
                 CBM_Console.supress_next_home = true;
@@ -226,6 +200,10 @@ namespace simple_emu_c64
                     c = '\xAD'; // sw box line corner
                 else if (c == '\u2518' || c == '\u251b')
                     c = '\xBD'; // se box line corner
+                else if (c == '\u2022')
+                    c = '\xD1'; // bullet
+                else if (c >= '\ue000' && c <= '\ue0ff')
+                    c = (char)(byte)c;
                 //else if (c > '\xff')
                 //    System.Diagnostics.Debug.WriteLine($"Received unicode {(ulong)c}");
             }
