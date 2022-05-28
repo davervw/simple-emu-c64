@@ -1,0 +1,38 @@
+Changing Windows console colors is known to more closely replicate the Commodore experience
+(you may vary to your preferences)
+Listed in left to right order for Console + System Menu + Properites + Colors
+
+   0,   0,   0 - ConsoleColor.Black
+  32,  32, 128 - ConsoleColor.DarkBlue
+  32,  96,  32 - ConsoleColor.DarkGreen
+  64,  64,  64 - ConsoleColor.DarkCyan(aka Dark Gray)
+  96,  64,   0 - ConsoleColor.DarkRed(aka Brown)
+ 128,   0, 128 - ConsoleColor.DarkMagenta
+ 180,  90,   0 - ConsoleColor.DarkYellow(aka Orange)
+ 128, 128, 128 - ConsoleColor.Gray(aka Light Gray)
+  96,  96,  96 - ConsoleColor.DarkGray(aka Medium Gray)
+  64,  64, 255 - ConsoleColor.Blue(aka Light Blue)
+ 128, 192, 128 - ConsoleColor.Green(aka Light Green)
+   0, 255, 255 - ConsoleColor.Cyan
+ 128,   0,   0 - ConsoleColor.Red
+ 240, 128, 128 - ConsoleColor.Magenta(aka Pink)
+ 224, 224, 224 - ConsoleColor.Yellow
+ 255, 255, 255 - ConsoleColor.White
+
+For returning to defaults, note that Windows colors default to
+   0,   0,   0 - ConsoleColor.Black
+   0,   0, 128 - ConsoleColor.DarkBlue
+   0, 128,   0 - ConsoleColor.DarkGreen
+   0, 128, 128 - ConsoleColor.DarkCyan
+ 128,   0,   0 - ConsoleColor.DarkRed
+ 128,   0, 128 - ConsoleColor.DarkMagenta
+ 128, 128,   0 - ConsoleColor.DarkYellow
+ 192, 192, 192 - ConsoleColor.Gray
+ 128, 128, 128 - ConsoleColor.DarkGray
+   0,   0, 255 - ConsoleColor.Blue
+   0, 255,   0 - ConsoleColor.Green
+   0, 255, 255 - ConsoleColor.Cyan
+ 255,   0,   0 - ConsoleColor.Red
+ 255,   0, 255 - ConsoleColor.Magenta
+ 255, 255,   0 - ConsoleColor.Yellow
+ 255, 255, 255 - ConsoleColor.White
