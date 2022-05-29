@@ -390,11 +390,11 @@ namespace simple_emu_c64
 
             public void ApplyColor()
             {
-                bool reverse = (this[243] != 0);
+                CBM_Console.Reverse = (this[243] != 0);
 
                 if (CBM_Console.Color)
                 {
-                    if (reverse)
+                    if (CBM_Console.Reverse && CBM_Console.Encoding != CBM_Console.CBMEncoding.petscii)
                     {
                         Console.BackgroundColor = ToConsoleColor(this[241]);
                         Console.ForegroundColor = ToConsoleColor(this[0xD021]);
@@ -407,7 +407,7 @@ namespace simple_emu_c64
                 }
                 else
                 {
-                    if (reverse)
+                    if (CBM_Console.Reverse && CBM_Console.Encoding != CBM_Console.CBMEncoding.petscii)
                     {
                         Console.BackgroundColor = startup_fg;
                         Console.ForegroundColor = startup_bg;
@@ -442,6 +442,12 @@ namespace simple_emu_c64
                     case 15: return ConsoleColor.Gray;
                     default: throw new InvalidOperationException("Missing case number in ToConsoleColor");
                 }
+            }
+
+            private void CheckLowercase()
+            {
+                CBM_Console.Lowercase = ((ram[0xD7] & 0x80) == 0) && ((ram[0xA2C] & 2) != 0)
+                    || ((ram[0xD7] & 0x80) != 0) && ((ram[0xF1] & 0x80) != 0);
             }
 
             public C128Memory(string basic_lo_file, string basic_hi_file, string chargen_file, string kernal_file)
@@ -549,6 +555,8 @@ namespace simple_emu_c64
                             ram[addr128k] = value;
                             if (addr128k == 241 || addr128k == 243)
                                 ApplyColor();
+                            else if (addr128k == 0xA2C || addr128k == 0xF1)
+                                CheckLowercase();
                         }
                     }
                 }

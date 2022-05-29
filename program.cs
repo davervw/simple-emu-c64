@@ -304,6 +304,7 @@ namespace simple_emu_c64
 
             while (true)
             {
+                CBM_Console.Lowercase = false;
                 cbm.ResetRun();
                 if (go_num == 0)
                 {
