@@ -294,6 +294,8 @@ namespace simple_emu_c64
                         io[addr - io_addr] = value;
                         if (addr == 65301)
                             ApplyColor();
+                        else if (addr == 0xFF13)
+                            CBM_Console.Lowercase = (value & 4) != 0;
                     }
                     else
                     {
@@ -306,7 +308,7 @@ namespace simple_emu_c64
 
             private void ApplyColor()
             {
-                bool reverse = (this[194] != 0);
+                CBM_Console.Reverse = (this[194] != 0);
                 if (CBM_Console.Color)
                 {
                     var bg_register = io[65301-io_addr];
@@ -315,7 +317,7 @@ namespace simple_emu_c64
                     var fg_color = (TedColor)(ram[1339] & 0xF);
                     var fg_luminance = (ram[1339] >> 4) & 7;
 
-                    if (reverse)
+                    if (CBM_Console.Reverse && CBM_Console.Encoding != CBM_Console.CBMEncoding.petscii)
                     {
                         Console.BackgroundColor = ConvertToConsoleColor(fg_color, fg_luminance);
                         Console.ForegroundColor = ConvertToConsoleColor(bg_color, bg_luminance);
@@ -328,7 +330,7 @@ namespace simple_emu_c64
                 }
                 else
                 {
-                    if (reverse)
+                    if (CBM_Console.Reverse && CBM_Console.Encoding != CBM_Console.CBMEncoding.petscii)
                     {
                         Console.BackgroundColor = startup_fg;
                         Console.ForegroundColor = startup_bg;
