@@ -343,6 +343,8 @@ namespace simple_emu_c64
                         io[addr - io_addr] = value;
                         if (addr == 0x900F) // background/border/inverse
                             ApplyColor();
+                        else if (addr == 0x9005) // includes graphics/lowercase switch
+                            CBM_Console.Lowercase = (value & 2) != 0;
                     }
                     else if (addr >= cart_addr && addr < basic_addr && ((ram_banks & 0x10) != 0))
                         ram[addr] = value;
@@ -351,10 +353,10 @@ namespace simple_emu_c64
 
             private void ApplyColor()
             {
-                bool reverse = (this[199] != 0) ^ ((this[0x900F] & 0x8) == 1);
+                CBM_Console.Reverse = (this[199] != 0) ^ ((this[0x900F] & 0x8) == 1);
                 if (CBM_Console.Color)
                 {
-                    if (reverse)
+                    if (CBM_Console.Reverse && CBM_Console.Encoding != CBM_Console.CBMEncoding.petscii)
                     {
                         Console.ForegroundColor = ToConsoleColor(this[0x900F] >> 4);
                         Console.BackgroundColor = ToConsoleColor(this[646]);
@@ -367,7 +369,7 @@ namespace simple_emu_c64
                 }
                 else
                 {
-                    if (reverse)
+                    if (CBM_Console.Reverse && CBM_Console.Encoding != CBM_Console.CBMEncoding.petscii)
                     {
                         Console.BackgroundColor = startup_fg;
                         Console.ForegroundColor = startup_bg;
