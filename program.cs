@@ -72,6 +72,7 @@ namespace simple_emu_c64
             var walkAddrs = new List<ushort>();
             var startupPRG = null as string;
             var encodingSpecified = false;
+            var traceOption = false;
             CBM_Console.CBMEncoding encoding = CBM_Console.CBMEncoding.ascii;
 
             try
@@ -150,11 +151,17 @@ namespace simple_emu_c64
                         CBM_Console.Color = true;
                         continue;
                     }
+                    if (string.Compare(args[i], "trace", ignoreCase: true) == 0)
+                    {
+                        traceOption = true;
+                        continue;
+                    }
                     if (File.Exists(args[i]) || File.Exists(args[i] + ".PRG"))
                     {
                         startupPRG = args[i];
                         continue;
                     }
+
                     error = true;
                     break;
                 }
@@ -248,6 +255,9 @@ namespace simple_emu_c64
 
             if (cbm != null && encodingSpecified)
                 CBM_Console.Encoding = encoding;
+
+            if (cbm != null && traceOption)
+                cbm.trace = true;
 
             Console.Error.WriteLine("6502 Emulator for Windows Console");
             Console.Error.WriteLine("C64, VIC-20, PET, TED, C128, ...");

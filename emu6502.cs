@@ -63,7 +63,7 @@ namespace simple_emu_c64
         protected bool C = false;
         protected ushort PC = 0;
 
-        protected bool trace = false;
+        public bool trace = false;
         protected bool step = false;
         protected bool exit = false;
 
