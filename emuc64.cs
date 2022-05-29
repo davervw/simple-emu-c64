@@ -435,11 +435,11 @@ namespace simple_emu_c64
 
             public void ApplyColor()
             {
-                bool reverse = (this[199] != 0);
+                CBM_Console.Reverse = (this[199] != 0);
 
                 if (CBM_Console.Color)
                 {
-                    if (reverse)
+                    if (CBM_Console.Reverse && CBM_Console.Encoding != CBM_Console.CBMEncoding.petscii)
                     {
                         Console.BackgroundColor = ToConsoleColor(this[646]);
                         Console.ForegroundColor = ToConsoleColor(this[0xD021]);
@@ -452,7 +452,7 @@ namespace simple_emu_c64
                 }
                 else
                 {
-                    if (reverse)
+                    if (CBM_Console.Reverse && CBM_Console.Encoding != CBM_Console.CBMEncoding.petscii)
                     {
                         Console.BackgroundColor = startup_fg;
                         Console.ForegroundColor = startup_bg;
@@ -562,6 +562,11 @@ namespace simple_emu_c64
                     }
                     else if (addr >= color_addr && addr < color_addr + color_size)
                         io[addr - io_addr] = value;
+                    else if (addr == 0xD018) // bit 2 is upper(unset)/lower(set)
+                    {
+                        io[addr - io_addr] = value;
+                        CBM_Console.Lowercase = (value & 2) != 0;
+                    }
                     //else if (addr >= io_addr && addr < io_addr + io.Length)
                     //    io[addr - io_addr] = value;
                 }

@@ -71,7 +71,11 @@ namespace simple_emu_c64
 
         public static bool Color { get; set; }
         //Warning: Default light blue on blue doesn't look good with default color palette for Windows console
-        //You can manually modify color pallette in Windows
+        //You can manually modify color pallette in Windows (see suggested colors documented in emuc64.cs)
+
+        public static bool Lowercase { get; set; }
+
+        public static bool Reverse { get; set; }
 
         public static void WriteChar(char c, bool supress_next_home=false)
         {
@@ -85,6 +89,11 @@ namespace simple_emu_c64
             }
             else if (encoding == CBMEncoding.petscii && ((byte)c & 127) >= 32)
             {
+                if (Reverse)
+                {
+                    Console.Write((char)(0xE200 | (byte)c | (Lowercase ? 0x100 : 0)));
+                    return;
+                }
                 if (c == '\\')
                 {
                     Console.Write('£');
@@ -105,7 +114,20 @@ namespace simple_emu_c64
                     Console.Write('π');
                     return;
                 }
-                Console.Write((char)(0xE000 | (byte)c));
+                else if (c >= '\x20' && c < '\x40' || c == '[' || c == ']')
+                {
+                    Console.Write(c);
+                    return;
+                }
+                else if (c >= 'A' && c <= 'Z' || Lowercase && c >= 'a' && c <= 'z')
+                {
+                    if (Lowercase)
+                        Console.Write((char)((int)c ^ 0x20));
+                    else
+                        Console.Write(c);
+                    return;
+                }
+                Console.Write((char)(0xE000 | (byte)c | (Lowercase ? 0x100 : 0)));
             }
             else if (c >= ' ' && c <= '~')
                 Console.Write(c);
