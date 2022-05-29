@@ -202,7 +202,9 @@ namespace simple_emu_c64
                 supress_next_cr = true;
             }
             char c = buffer[0];
-            if (encoding == CBMEncoding.petscii)
+            if (Lowercase && (c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z'))
+                c = (char)((byte)c ^ 0x20); // toggle case
+            else if (encoding == CBMEncoding.petscii)
             {
                 if (c == 'π')
                     c = '\xff';
