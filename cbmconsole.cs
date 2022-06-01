@@ -41,6 +41,8 @@ namespace simple_emu_c64
         static bool supress_next_home = false;
         static bool supress_next_cr = false;
         static List<char> buffer = new List<char>();
+        static List<ConsoleKeyInfo> keybuffer = new List<ConsoleKeyInfo>();
+        static bool stop_pressed = false;
 
         public enum CBMEncoding
         {
@@ -202,8 +204,11 @@ namespace simple_emu_c64
                 supress_next_cr = true;
             }
             char c = buffer[0];
+            buffer.RemoveAt(0);
             if (Lowercase && (c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z'))
                 c = (char)((byte)c ^ 0x20); // toggle case
+            else if (c == '\b')
+                c = '\x14';
             else if (encoding == CBMEncoding.petscii)
             {
                 if (c == 'π')
@@ -231,43 +236,79 @@ namespace simple_emu_c64
                 //else if (c > '\xff')
                 //    System.Diagnostics.Debug.WriteLine($"Received unicode {(ulong)c}");
             }
-            buffer.RemoveAt(0);
             return (byte)c;
         }
 
-        public static byte GetIn()
+        public static byte GetIn(bool check_stop = false)
         {
-            if (buffer.Count > 0)
-                return ReadChar();
-            else if (Console.KeyAvailable)
+            if (buffer.Count == 0 || check_stop)
             {
-                var key = Console.ReadKey(true);
-                return (byte)key.KeyChar;
+                if (!Console.KeyAvailable && !check_stop && keybuffer.Count == 0)
+                    return 0;
+
+                ConsoleKeyInfo key;
+                if (check_stop || keybuffer.Count == 0)
+                {
+                    key = Console.ReadKey(true);
+                    if (check_stop)
+                        keybuffer.Add(key); // assume must be buffered
+                }
+                else
+                {
+                    key = keybuffer[0];
+                    keybuffer.RemoveAt(0);
+                }
+                                        
+                //System.Diagnostics.Debug.WriteLine($"{key.Key} {key.Modifiers} {(int)key.KeyChar}");
+
+                if (key.Key == ConsoleKey.LeftArrow)
+                    return 157;
+                if (key.Key == ConsoleKey.RightArrow)
+                    return 29;
+                if (key.Key == ConsoleKey.UpArrow)
+                    return 145;
+                if (key.Key == ConsoleKey.DownArrow)
+                    return 17;
+                if (key.Key == ConsoleKey.Home)
+                {
+                    if ((key.Modifiers & ConsoleModifiers.Shift) == ConsoleModifiers.Shift)
+                        return 147;
+                    else
+                        return 19;
+                }
+                if (key.Key == ConsoleKey.Delete)
+                    return 20;
+                if (key.KeyChar == 0)
+                    return 0;
+                if (key.KeyChar == 27)
+                {
+                    if (check_stop)
+                        keybuffer.RemoveAt(keybuffer.Count - 1); // don't buffer STOP
+                    stop_pressed = true;
+                    return 0;
+                }
+
+                if (check_stop)
+                    keybuffer.RemoveAt(keybuffer.Count - 1); // not buffered here
+                Push(key.KeyChar.ToString());
+
+                if (check_stop)
+                    return 0;
             }
-            else
-                return 0;
+
+            return ReadChar();
         }
 
         public static bool CheckStop()
         {
-            if (buffer.Count > 0)
-            {
-                if (buffer.Contains('\x1B'))
-                    return true;
-            }
-
             if (Console.KeyAvailable)
+                CBM_Console.GetIn(check_stop: true);
+
+            if (stop_pressed)
             {
-                var key = Console.ReadKey(true);
-                if (key.KeyChar == '\x1B') // ESC
-                {
-                    buffer.Clear();
-                    return true;
-                }
-                else if (key.KeyChar != 0)
-                {
-                    Push(key.KeyChar.ToString());
-                }
+                stop_pressed = false;
+                buffer.Clear();
+                return true;
             }
 
             return false;
