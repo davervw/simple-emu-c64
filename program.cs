@@ -73,6 +73,7 @@ namespace simple_emu_c64
             var startupPRG = null as string;
             var encodingSpecified = false;
             var traceOption = false;
+            var quietOption = false;
             CBM_Console.CBMEncoding encoding = CBM_Console.CBMEncoding.ascii;
 
             try
@@ -154,6 +155,11 @@ namespace simple_emu_c64
                     if (string.Compare(args[i], "trace", ignoreCase: true) == 0)
                     {
                         traceOption = true;
+                        continue;
+                    }
+                    if (string.Compare(args[i], "quiet", ignoreCase: true) == 0)
+                    {
+                        quietOption = true;
                         continue;
                     }
                     if (File.Exists(args[i]) || File.Exists(args[i] + ".PRG"))
@@ -259,15 +265,18 @@ namespace simple_emu_c64
             if (cbm != null && traceOption)
                 cbm.trace = true;
 
-            Console.Error.WriteLine("6502 Emulator for Windows Console");
-            Console.Error.WriteLine("C64, VIC-20, PET, TED, C128, ...");
-            Console.Error.WriteLine("");
-            Console.Error.WriteLine("simple-emu-c64 version 1.8.8");
-            Console.Error.WriteLine("Copyright (c) 2022 David R. Van Wagner");
-            Console.Error.WriteLine("davevw.com");
-            Console.Error.WriteLine("Open Source, MIT License");
-            Console.Error.WriteLine("github.com/davervw/simple-emu-c64");
-            Console.Error.WriteLine("");
+            if (!quietOption)
+            {
+                Console.Error.WriteLine("6502 Emulator for Windows Console");
+                Console.Error.WriteLine("C64, VIC-20, PET, TED, C128, ...");
+                Console.Error.WriteLine("");
+                Console.Error.WriteLine("simple-emu-c64 version 1.8.9");
+                Console.Error.WriteLine("Copyright (c) 2022 David R. Van Wagner");
+                Console.Error.WriteLine("davevw.com");
+                Console.Error.WriteLine("Open Source, MIT License");
+                Console.Error.WriteLine("github.com/davervw/simple-emu-c64");
+                Console.Error.WriteLine("");
+            }
 
             if (args.Length == 0 || error || keyword == Keyword.help) // if no arguments present, then show usage as well
             {
