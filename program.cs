@@ -270,7 +270,7 @@ namespace simple_emu_c64
                 Console.Error.WriteLine("6502 Emulator for Windows Console");
                 Console.Error.WriteLine("C64, VIC-20, PET, TED, C128, ...");
                 Console.Error.WriteLine("");
-                Console.Error.WriteLine("simple-emu-c64 version 1.8.9");
+                Console.Error.WriteLine("simple-emu-c64 version 1.8.10");
                 Console.Error.WriteLine("Copyright (c) 2022 David R. Van Wagner");
                 Console.Error.WriteLine("davevw.com");
                 Console.Error.WriteLine("Open Source, MIT License");
@@ -287,6 +287,7 @@ namespace simple_emu_c64
                 Console.Error.WriteLine("  simple-emu-c64 [system] {ram #}    (system=[c64|vic20|pet|c16|plus4|ted|c128])");
                 Console.Error.WriteLine("  simple-emu-c64 [system] walk [addr1 ...]");
                 Console.Error.WriteLine("  simple-emu-c64 [c64|ted] file      (autorun prg)");
+                Console.Error.WriteLine("  simple-emu-c64 [c64|...] color petscii quiet    (use C64 Pro Mono font https://style64.org/c64-truetype)");
                 Console.Error.WriteLine("");
                 Console.WriteLine();
             }
