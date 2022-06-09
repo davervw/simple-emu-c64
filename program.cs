@@ -341,11 +341,14 @@ namespace simple_emu_c64
                 ram_size = (int)(ram_kilobytes * 1024);
                 try
                 {
-                    if (go_num == 2001 && CBM_Console.Color)
+                    if (go_num == 2001)
                     {
-                        Console.BackgroundColor = ConsoleColor.Black;
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.Clear();
+                        if (CBM_Console.Color)
+                        {
+                            Console.BackgroundColor = ConsoleColor.Black;
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.Clear();
+                        }
                         cbm = new EmuPET(ram_size: ram_size, basic_file: $"pet{Path.DirectorySeparatorChar}basic1", edit_file: $"pet{Path.DirectorySeparatorChar}edit1g", kernal_file: $"pet{Path.DirectorySeparatorChar}kernal1");
                     }
                     else if (go_num == 20)
