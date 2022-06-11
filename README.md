@@ -16,6 +16,7 @@ Notable features
 * Plus/4 implementation has banking enabled, can access almost 60K RAM for BASIC!
 * C128 MMU implemented, with two banks of 64K memory, almost 120K for BASIC programs (57K) and variables (63K).
 * VIC-20 memory is configurable, can access almost 28K RAM for BASIC!  Plus 11K more for machine code. Valid memory configurations include 5, 8, 13, 16, 21, 24, 29, 32, 37, 40 covering combinations building up from 1K LOW + OPTIONAL 3K EXPANSION + 4K BASE + 8/16/24/32K EXPANSION.  Note not all expansion memory is always accessible to BASIC.
+* See [release](https://github.com/davervw/simple-emu-c64/releases) for third-party Commodore look-alike font, and color customizaiton instructions.
 
 ![Sample.bas](https://github.com/davervw/simple-emu-c64/raw/master/Sample.png)
 
