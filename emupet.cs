@@ -321,8 +321,12 @@ namespace simple_emu_c64
                     if (addr < ram.Length)
                     {
                         ram[addr] = value;
-                        if (addr == 526)
+                        if (addr == 526) // 0x20e
                             ApplyColor();
+                        else if (addr == 251) // 0xfb
+                            CBM_Console.InsertMode = (value != 0);
+                        else if (addr == 234) // 0xea
+                            CBM_Console.QuoteMode = (value != 0);
                     }
                     else if (addr >= video_addr && addr < video_addr + video_size)
                         video_ram[addr - video_addr] = value;

@@ -79,6 +79,10 @@ namespace simple_emu_c64
 
         public static bool Reverse { get; set; }
 
+        public static bool QuoteMode { get; set; }
+
+        public static bool InsertMode { get; set; }
+
         public static void WriteChar(char c, bool supress_next_home=false)
         {
             // we're emulating, so draw character on local console window
@@ -88,6 +92,16 @@ namespace simple_emu_c64
                     supress_next_cr = false;
                 else
                     Console.WriteLine();
+            }
+            else if (encoding == CBMEncoding.petscii && (byte)c < 32 && (QuoteMode || InsertMode) && !((byte)c == 20 && !InsertMode))
+            {
+                Console.Write((char)(0xE200 | ((byte)c + (byte)'A' - 1) | (Lowercase ? 0x100 : 0)));
+                return;
+            }
+            else if (encoding == CBMEncoding.petscii && (byte)c >= 128 && ((byte)c & 127) < 32 && (QuoteMode || InsertMode))
+            {
+                Console.Write((char)(0xE200 | (((byte)c & 127) + (byte)'a' - 1) | (Lowercase ? 0x100 : 0)));
+                return;
             }
             else if (encoding == CBMEncoding.petscii && ((byte)c & 127) >= 32)
             {

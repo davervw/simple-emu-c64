@@ -302,6 +302,10 @@ namespace simple_emu_c64
                         ram[addr & (ram.Length - 1)] = value; // includes writing under rom, note RAM wraps around when less than 64K
                         if (addr == 194 || addr == 1339)
                             ApplyColor();
+                        else if (addr == 207)
+                            CBM_Console.InsertMode = (value != 0);
+                        else if (addr == 203)
+                            CBM_Console.QuoteMode = (value != 0);
                     }
                 }
             }

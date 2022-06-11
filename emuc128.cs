@@ -88,20 +88,16 @@ namespace simple_emu_c64
 
         protected override bool ExecutePatch()
         {
-            if (PC == CHAROUT_TRAP)
+            if (PC == 0xFFD2)
             {
                 if (A == 27)
-                {
                     esc_mode = !esc_mode;
-                    CHAROUT_TRAP = -1;
-                    return true; // trap again, but not outputting to stdoutl
-                }
                 else if (esc_mode)
                 {
                     esc_mode = false;
-                    CHAROUT_TRAP = -1;
-                    return true; // trap again, but not outputting to stdout
+                    return false; // suppress output to Console
                 }
+                return base.ExecutePatch();
             }
             if (memory[PC] == 0x6C && memory[(ushort)(PC + 1)] == 0x30 && memory[(ushort)(PC + 2)] == 0x03) // catch JMP(LOAD_VECTOR), redirect to jump table
             {
@@ -557,6 +553,10 @@ namespace simple_emu_c64
                                 ApplyColor();
                             else if (addr128k == 0xA2C || addr128k == 0xF1)
                                 CheckLowercase();
+                            else if (addr128k == 244)
+                                CBM_Console.QuoteMode = (value != 0);
+                            else if (addr128k == 245)
+                                CBM_Console.InsertMode = (value != 0);
                         }
                     }
                 }

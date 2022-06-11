@@ -554,6 +554,10 @@ namespace simple_emu_c64
                         ram[addr] = value; // banked RAM, and RAM under ROM
                         if (addr == 646 || addr == 199)
                             ApplyColor();
+                        else if (addr == 216)
+                            CBM_Console.InsertMode = (value != 0);
+                        else if (addr == 212)
+                            CBM_Console.QuoteMode = (value != 0);
                     }
                     else if (addr == 0xD021) // background
                     {
