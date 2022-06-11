@@ -327,6 +327,10 @@ namespace simple_emu_c64
                         ram[addr] = value;
                         if (addr == 199 || addr == 646)
                             ApplyColor();
+                        else if (addr == 216)
+                            CBM_Console.InsertMode = (value != 0);
+                        else if (addr == 212)
+                            CBM_Console.QuoteMode = (value != 0);
                     }
                     else if (addr >= ram3k_addr && addr < ram4k_addr && ((ram_banks & 0x01) != 0))
                         ram[addr] = value;
