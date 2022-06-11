@@ -1,6 +1,8 @@
 # simple-emu-c64 #
 Here is a simple Commodore (64, 128, PET 2001, VIC-20, Commodore 16, Plus/4, ...) and 6502 Emulator I wrote from scratch.  Runs in a text console window.
 
+![Machines](https://github.com/davervw/simple-emu-c64/raw/master/machines.png)
+
 Notable features
 
 * Emulates MOS6502/6510 series processors as appropriate
