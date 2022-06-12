@@ -78,3 +78,5 @@ Read the blog entries at [davevw.com](http://davevw.com)
 * [Original and updated announcement](https://techwithdave.davevw.com/2020/03/simple-emu-c64.html)
 * [C128 model support added](https://techwithdave.davevw.com/2022/05/simplec128.html)
 * [GO 128 enhancment highlighted](https://techwithdave.davevw.com/2022/05/go.html)
+
+And [Slide Presentation](https://github.com/davervw/slides-c64/#readme) is also available
