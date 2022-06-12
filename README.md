@@ -73,4 +73,8 @@ CREDITS:
 * Inspired by [Retroshield 6502](http://www.8bitforce.com/projects/retroshield)
 * Built with Microsoft Visual Studio or Visual Code, .NET Framework 4, C#
 
-Read the blog Entry at [davevw.com](https://techwithdave.davevw.com/2020/03/simple-emu-c64.html)
+Read the blog entries at [davevw.com](http://davevw.com)
+
+* [Original and updated announcement](https://techwithdave.davevw.com/2020/03/simple-emu-c64.html)
+* [C128 model support added](https://techwithdave.davevw.com/2022/05/simplec128.html)
+* [GO 128 enhancment highlighted](https://techwithdave.davevw.com/2022/05/go.html)
