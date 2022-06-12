@@ -6,7 +6,7 @@ Here is a simple Commodore (64, 128, PET 2001, VIC-20, Commodore 16, Plus/4, ...
 Notable features
 
 * Emulates MOS6502/6510 series processors as appropriate
-* Runs as a Windows Console Program (source is C#, also ported to C at [c-simple-emu6502-cbm](https://github.com/davervw/c-simple-emu6502-cbm))
+* Runs as a Windows Console Program (or in Mac/Linux terminal, source is C#, also ported to C at [c-simple-emu6502-cbm](https://github.com/davervw/c-simple-emu6502-cbm))
 * Text based Commodore BASIC and 6502 Assembly/Machine Code programs supported
 * only a few hooks: CHRIN-$FFCF/CHROUT-$FFD2/COLOR-$D021/199/646 (COLOR background/inverse $9001 on VIC-20)
 (also hooked READY, GETIN, STOP, SETLFS, SETNAM, LOAD, SAVE for better simulation) *see limitations
