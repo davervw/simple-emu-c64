@@ -46,13 +46,13 @@ USAGE:
 
 LIMITATIONS:
 
-* Only keyboard/console I/O.  No text pokes, no graphics.  Just stdio.  Asynchronous input (GET K$) is implemented, and INPUT S$ works.  No special Commodore keys, e.g. function keys, cursor keys, color keys, STOP/RESTORE, RUN, PETSCII graphics characters, etc.  
+* Only keyboard/console I/O.  No text pokes, no graphics.  Just stdio.  Asynchronous input `GET K$` is implemented, and `INPUT S$` works.  No special Commodore keys, e.g. function keys, cursor keys, color keys, STOP/RESTORE, RUN, PETSCII graphics characters, etc.  
 * No keyboard color switching.  No border or border color on most.
 * Reverse/inverse characters not yet supported on PET.
 * Hooks on PET limited to version 1 ROMs.
 * LOAD/SAVE/STOP(ESC) not working on PET.
 * No screen editing (gasp!) Just short and sweet for running Commodore BASIC in terminal/console window via 6502 chip emulation in software.  Uses Windows Console line editor features instead.
-* No PETSCII graphic characters, only supports printables CHR$(32) to CHR$(126).  But does support CHR$(147) for clear screen and Home/Left/Right/Up/Down characters too (output only).
+* No PETSCII graphic characters, only supports printables `CHR$(32)` to `CHR$(126)`.  But does support `CHR$(147)` for clear screen and Home/Left/Right/Up/Down characters too (output only).
 * No timers.  No interrupts except BRK.  No NMI or RESTORE key.
 * Loading and saving of files not currently implemented for PET (but Windows clipboard works!)
 * No cartridge, no joystick, no paddles, no light pen, no IEC, no serial port, no cassette, no sound, no sprites.
