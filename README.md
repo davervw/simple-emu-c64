@@ -20,6 +20,16 @@ Notable features
 
 ![Sample.bas](https://github.com/davervw/simple-emu-c64/raw/master/Sample.png)
 
+BUILD/INSTALL:
+
+1. Install ROMs in subdirectories c64, c128, pet, ted, vic20 (copy from VICE or distribution or similar)
+2. Dependency: [.NET 7.0](https://dotnet.microsoft.com/en-us/download/dotnet/7.0)
+3. Build from Visual Studio (simple-emu-c64.sln),
+    or
+   from command line or Visual Code (recommend delete simple-emu-c64.csproj): dotnet build
+4. Either run the executable, or use:
+    dotnet run
+
 USAGE:
 
     simple-emu-c64
