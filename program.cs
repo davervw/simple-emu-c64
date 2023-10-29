@@ -7,7 +7,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2020-2022 by David R.Van Wagner
+// Copyright (c) 2020-2023 by David R.Van Wagner
 // davevw.com
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -51,6 +51,7 @@ namespace simple_emu_c64
             c16 = 5, 
             plus4 = 6, 
             c128 = 7,
+            test = 8,
         };
 
         private enum Keyword
@@ -257,6 +258,10 @@ namespace simple_emu_c64
                     Console.Clear();
                 }
                 cbm = new EmuC128(basic_lo_file: $"c128{Path.DirectorySeparatorChar}basiclo", basic_hi_file: $"c128{Path.DirectorySeparatorChar}basichi", chargen_file: $"c128{Path.DirectorySeparatorChar}chargen", kernal_file: $"c128{Path.DirectorySeparatorChar}kernal");
+            }
+            else if (model == CBMmodel.test)
+            {
+                cbm = new EmuTest(startupPRG);
             }
 
             if (cbm != null && encodingSpecified)
