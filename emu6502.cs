@@ -7,7 +7,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2020-2022 by David R. Van Wagner
+// Copyright (c) 2020-2023 by David R. Van Wagner
 // davevw.com
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -155,7 +155,7 @@ namespace simple_emu_c64
                     case 0x2A: SetA(ROL(A)); break;
                     case 0x2C: BIT(GetABS(PC, out bytes)); break;
                     case 0x2D: AND(GetABS(PC, out bytes)); break;
-                    case 0x2E: ROL(GetABS(PC, out bytes)); break;
+                    case 0x2E: SetABS(ROL(GetABS(PC, out bytes)), PC, out bytes); break;
 
                     case 0x30: BMI(ref PC, out conditional, out bytes); break;
                     case 0x31: AND(GetIndY(PC, out bytes)); break;
@@ -175,7 +175,7 @@ namespace simple_emu_c64
                     case 0x4A: SetA(LSR(A)); break;
                     case 0x4C: JMP(ref PC, out bytes); break;
                     case 0x4D: EOR(GetABS(PC, out bytes)); break;
-                    case 0x4E: LSR(GetABS(PC, out bytes)); break;
+                    case 0x4E: SetABS(LSR(GetABS(PC, out bytes)), PC, out bytes); break;
 
                     case 0x50: BVC(ref PC, out conditional, out bytes); break;
                     case 0x51: EOR(GetIndY(PC, out bytes)); break;
@@ -325,7 +325,7 @@ namespace simple_emu_c64
                 int result_dec = A_dec - value_dec - (C ? 0 : 1);
                 C = (result_dec >= 0);
                 if (!C)
-                    result_dec = -result_dec; // absolute value
+                    result_dec += 100; // fixup negative number
                 int result = (result_dec % 10) | (((result_dec / 10) % 10) << 4);
                 SetA(result);
                 N = false; // undefined?
@@ -460,7 +460,8 @@ namespace simple_emu_c64
         {
             int flags = (N ? 0x80 : 0)
                         | (V ? 0x40 : 0)
-                        | (B ? 0x10 : 0)
+                        | 0x20 // reserved, always set
+                        | 0x10 // break always set when push
                         | (D ? 0x08 : 0)
                         | (I ? 0x04 : 0)
                         | (Z ? 0x02 : 0)
@@ -680,6 +681,7 @@ namespace simple_emu_c64
             Push(LO(PC));
             B = true;
             PHP();
+            I = true;
             PC = (ushort)(memory[0xFFFE] + (memory[0xFFFF] << 8)); // JMP(IRQ)
             bytes = 0;
         }
@@ -728,15 +730,15 @@ namespace simple_emu_c64
         byte GetIndX(ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = (ushort)(memory[(ushort)(addr + 1)] + X);
-            return memory[(ushort)(memory[addr2] | (memory[(ushort)(addr2 + 1)] << 8))];
+            byte zp = (byte)(memory[(ushort)(addr + 1)] + X); // must truncate to byte to keep in zero page
+            return memory[(ushort)(memory[zp] | (memory[++zp] << 8))]; // address overflow must keep within zero page, using increment to do this
         }
 
         void SetIndX(byte value, ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = (ushort)(memory[(ushort)(addr + 1)] + X);
-            ushort addr3 = (ushort)(memory[addr2] | (memory[(ushort)(addr2 + 1)] << 8));
+            byte zpaddr = (byte)(memory[(ushort)(addr + 1)] + X); // must truncate address to byte to keep in zero page
+            ushort addr3 = (ushort)(memory[zpaddr] | (memory[++zpaddr] << 8)); // address overflow must keep within zero page, using increment to do this
             memory[addr3] = value;
         }
 
@@ -759,43 +761,43 @@ namespace simple_emu_c64
         byte GetZP(ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = memory[(ushort)(addr + 1)];
-            return memory[addr2];
+            byte zpaddr = memory[(ushort)(addr + 1)];
+            return memory[zpaddr];
         }
 
         void SetZP(byte value, ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = memory[(ushort)(addr + 1)];
-            memory[addr2]=value;
+            byte zpaddr = memory[(ushort)(addr + 1)];
+            memory[zpaddr]=value;
         }
 
         byte GetZPX(ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = memory[(ushort)(addr + 1)];
-            return memory[(byte)(addr2 + X)];
+            byte zpaddr = memory[(ushort)(addr + 1)];
+            return memory[(byte)(zpaddr + X)];
         }
 
         void SetZPX(byte value, ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = memory[(ushort)(addr + 1)];
-            memory[(byte)(addr2 + X)] = value;
+            byte zpaddr = memory[(ushort)(addr + 1)];
+            memory[(byte)(zpaddr + X)] = value;
         }
 
         byte GetZPY(ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = memory[(ushort)(addr + 1)];
-            return memory[(byte)(addr2 + Y)];
+            byte zpaddr = memory[(ushort)(addr + 1)];
+            return memory[(byte)(zpaddr + Y)];
         }
 
         void SetZPY(byte value, ushort addr, out byte bytes)
         {
             bytes = 2;
-            ushort addr2 = memory[(ushort)(addr + 1)];
-            memory[(byte)(addr2 + Y)] = value;
+            byte zpaddr = memory[(ushort)(addr + 1)];
+            memory[(byte)(zpaddr + Y)] = value;
         }
 
         byte GetABS(ushort addr, out byte bytes)
