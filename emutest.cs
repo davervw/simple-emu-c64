@@ -30,12 +30,13 @@ namespace simple_emu_c64
                 PC = 0x0400; // start address of tests are 0400
                 Console.WriteLine("Start");
                 start = false;
+                return true;
             }
             if (memory[PC] == 0xD0 && !Z && memory[(ushort)(PC + 1)] == 0xFE)
             {
                 Console.WriteLine($"{PC:X4} Test FAIL");
                 exit = true;
-                return true;
+                return false;
             }
             if (memory[PC] == 0x4C
                 && (memory[(ushort)(PC + 1)] == (PC & 0xFF) && memory[(ushort)(PC + 2)] == (PC >> 8)
@@ -44,12 +45,12 @@ namespace simple_emu_c64
             {
                 Console.WriteLine($"{PC:X4} COMPLETED SUCCESS");
                 exit = true;
-                return true;
+                return false;
             }
             if (memory[0x200] != last_test)
             {
-                Console.WriteLine($"{PC:X4} Starting test {memory[0x200]:X2}");
                 last_test = memory[0x200];
+                Console.WriteLine($"{PC:X4} Starting test {last_test:X2}");
             }  
             return base.ExecutePatch();
         }
