@@ -11,7 +11,7 @@ Notable features
 * Text based Commodore BASIC and 6502 Assembly/Machine Code programs supported
 * only a few hooks: CHRIN-$FFCF/CHROUT-$FFD2/COLOR-$D021/199/646 (COLOR background/inverse $9001 on VIC-20)
 (also hooked READY, GETIN, STOP, SETLFS, SETNAM, LOAD, SAVE for better simulation) *see limitations
-* reverse/inverse charactes implemented for most systems
+* reverse/inverse characters implemented for most systems
 * ESC is STOP key
 * C64 RAM/ROM/IO/CHARSET banking is implemented!
 * Plus/4 implementation has banking enabled, can access almost 60K RAM for BASIC!
